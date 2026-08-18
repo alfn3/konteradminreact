@@ -1,0 +1,127 @@
+<div id="view-konter" class="d-none page-section">
+  
+  <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fa-solid fa-shop me-2"></i>Data Konter</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+      
+      <div class="input-group me-2">
+        <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+        <input type="text" class="form-control" id="searchKonter" placeholder="Cari Konter..." onkeyup="searchTableKonter()">
+      </div>
+
+      <button type="button" class="btn btn-success me-2" onclick="bukaModalTambah()">
+        <i class="fa-solid fa-plus me-1"></i> Tambah Baru
+      </button>
+
+      <button type="button" class="btn btn-primary" onclick="loadDataKonter()">
+        <i class="fa-solid fa-arrows-rotate me-1"></i> Refresh
+      </button>
+
+    </div>
+  </div>
+
+  <div id="loadingKonter" class="text-center my-5 d-none">
+    <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
+  </div>
+
+  <div class="card shadow-sm" id="tableContainerKonter">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover table-bordered table-striped align-middle mb-0 text-nowrap" id="tableKonterMain">
+          <thead class="table-dark">
+            <tr>
+              <th>Konter</th>
+              <th class="text-center">Spreadsheet ID</th>
+              <th class="text-center">Latitude</th>
+              <th class="text-center">Longitude</th>
+              <th class="text-center">Radius</th>
+              <th class="text-center">Penjualan</th>
+              <th class="text-center">Uang</th>
+              <th class="text-center">Selisih</th>
+              
+              <th class="text-center sticky-end bg-dark">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="tableBodyKonter"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card-footer bg-white py-3">
+      <small class="text-muted" id="infoKonter">Menampilkan data...</small>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalFormKonter" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white" id="modalHeaderKonter">
+          <h5 class="modal-title fw-bold" id="modalTitleKonter">Form Konter</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formKonter">
+            <input type="hidden" id="formMode"> 
+            <input type="hidden" id="k_index"> 
+            
+            <div class="mb-3">
+              <label class="form-label fw-bold">Nama Konter</label>
+              <input type="text" class="form-control" id="k_nama" placeholder="Contoh: Konter Cabang A">
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-bold">Spreadsheet ID</label>
+              <input type="text" class="form-control" id="k_ssid" placeholder="ID File Spreadsheet...">
+              <div class="form-text small">ID unik dari URL Google Spreadsheet.</div>
+            </div>
+
+            <hr>
+            <h6 class="fw-bold text-muted mb-2"><i class="fa-solid fa-location-dot me-1"></i> Titik Lokasi</h6>
+
+            <div id="mapContainerWrapper" class="mb-3 d-none border rounded p-1">
+               <div id="mapPicker" style="height: 300px; width: 100%; z-index: 0;"></div>
+               <div class="text-center bg-light small py-1 text-muted">
+                 Geser <b>Pin Biru</b> ke lokasi konter.
+               </div>
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <button type="button" class="btn btn-sm btn-success w-100" onclick="tampilkanPetaPicker()">
+                   <i class="fa-solid fa-map-pin me-1"></i> Pilih Lewat Peta
+                </button>
+              </div>
+              <div class="col-6">
+                <button type="button" class="btn btn-sm btn-outline-primary w-100" onclick="cekLokasiModal()">
+                   <i class="fa-solid fa-map-location-dot me-1"></i> Tes Buka Maps
+                </button>
+              </div>
+            </div>
+
+            <div class="row g-2">
+              <div class="col-6">
+                 <label class="form-label">Latitude</label>
+                 <input type="text" class="form-control" id="k_lat" placeholder="-6.xxxxx">
+              </div>
+              <div class="col-6">
+                 <label class="form-label">Longitude</label>
+                 <input type="text" class="form-control" id="k_long" placeholder="110.xxxxx">
+              </div>
+              <div class="col-12">
+                 <label class="form-label">Radius (meter)</label>
+                 <input type="number" class="form-control" id="k_radius" placeholder="Contoh: 50">
+              </div>
+            </div>
+
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-primary" onclick="simpanKonter()">
+            <i class="fa-solid fa-floppy-disk me-1"></i> Simpan
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,62 @@
+<div id="view-jadwal" class="d-none page-section">
+  
+  <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-4 border-bottom">
+    <div>
+      <h2 class="fw-bold text-dark mb-0"><i class="fa-regular fa-calendar-check me-2 text-success"></i>Jadwal Hari Ini</h2>
+      <p class="text-muted small mb-0 mt-1">
+        <i class="fa-solid fa-clock me-1"></i> <span id="infoTanggalJadwal">Memuat...</span>
+      </small>
+    </div>
+    
+    <button type="button" class="btn btn-dark rounded-pill px-4 shadow-sm" onclick="bukaModalMasterJadwal()">
+      <i class="fa-solid fa-calendar-days me-2"></i> Atur Jadwal Mingguan
+    </button>
+  </div>
+
+  <div id="loadingJadwal" class="text-center my-5 d-none">
+    <div class="spinner-border text-success" role="status"></div>
+    <p class="mt-2 text-muted">Sinkronisasi jadwal...</p>
+  </div>
+
+  <div id="contentJadwal" class="d-none">
+    <div class="row g-4 justify-content-center" id="jadwalTodayContainer">
+       </div>
+  </div>
+
+  <div class="modal fade" id="modalMasterJadwal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"> <div class="modal-content border-0 shadow-lg rounded-4">
+        
+        <div class="modal-header bg-dark text-white">
+          <h5 class="modal-title"><i class="fa-solid fa-calendar-week me-2"></i>Master Jadwal Mingguan</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        
+        <div class="modal-body bg-light">
+          <ul class="nav nav-pills nav-fill mb-3 bg-white p-2 rounded shadow-sm" id="pills-week" role="tablist">
+            <li class="nav-item"><button class="nav-link active fw-bold" data-bs-toggle="pill" data-bs-target="#day-0">SENIN</button></li>
+            <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#day-1">SELASA</button></li>
+            <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#day-2">RABU</button></li>
+            <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#day-3">KAMIS</button></li>
+            <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#day-4">JUMAT</button></li>
+            <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#day-5">SABTU</button></li>
+            <li class="nav-item"><button class="nav-link fw-bold text-danger" data-bs-toggle="pill" data-bs-target="#day-6">MINGGU</button></li>
+          </ul>
+
+          <form id="formMasterJadwal">
+             <div class="tab-content" id="weekContent">
+               </div>
+          </form>
+        </div>
+        
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Tutup</button>
+          <button type="button" class="btn btn-success rounded-pill px-4" onclick="simpanMasterJadwal()">
+            <i class="fa-solid fa-floppy-disk me-2"></i> Simpan Semua Perubahan
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>

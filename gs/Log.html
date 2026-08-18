@@ -1,0 +1,62 @@
+<div id="view-log" class="d-none page-section">
+  
+  <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fa-solid fa-list-check me-2"></i>Log Aktivitas</h1>
+    
+    <div class="btn-toolbar mb-2 mb-md-0">
+      
+      <div class="input-group me-3 mb-2 mb-sm-0">
+        <button class="btn btn-outline-secondary" onclick="navigasiLog(-1)">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        
+        <input type="date" class="form-control fw-bold text-center" id="tglLog" style="max-width: 160px;" onchange="loadDataLog()">
+        
+        <button class="btn btn-outline-secondary" onclick="navigasiLog(1)">
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+        
+        <button type="button" class="btn btn-primary ms-2" onclick="loadDataLog()">
+          <i class="fa-solid fa-arrows-rotate"></i>
+        </button>
+      </div>
+
+      <div class="input-group">
+        <span class="input-group-text bg-white"><i class="fa-solid fa-magnifying-glass"></i></span>
+        <input type="text" class="form-control" id="searchInputLog" placeholder="Cari data..." onkeyup="filterTabelLog()" style="max-width: 250px;">
+      </div>
+
+    </div>
+  </div>
+
+  <div id="loadingLog" class="text-center my-5 d-none">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="mt-2 text-muted">Memuat log tanggal terpilih...</p>
+  </div>
+
+  <div class="card shadow-sm" id="tableContainerLog">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover table-bordered table-striped align-middle mb-0 table-sm" id="tableLogMain" style="font-size: 0.85rem;">
+          <thead class="table-dark text-center">
+            <tr>
+              <th class="py-2">Waktu</th> 
+              <th class="py-2">Email</th>
+              <th class="py-2">Konter</th>
+              <th class="py-2">Kategori</th>
+              <th class="py-2">Produk</th>
+              <th class="py-2">Komentar</th>
+              <th class="py-2">Status</th>
+              <th class="py-2 bg-warning text-dark sticky-end" style="width: 80px;">Koreksi</th>
+            </tr>
+          </thead>
+          <tbody id="tableBodyLog"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card-footer bg-white py-2">
+      <small class="text-muted" id="infoLog">Menampilkan data...</small>
+    </div>
+  </div>
+
+</div>

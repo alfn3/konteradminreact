@@ -1,0 +1,10 @@
+{
+  "description": "Streamline mobile store operations with a modern admin dashboard that offers real-time data management, employee scheduling, and performance tracking.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

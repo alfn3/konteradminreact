@@ -1,0 +1,13 @@
+Proyek: Admin Mobile Cell (Google Apps Script)
+File Terdeteksi: dashboard.html, datastok.html, index.html, info.html, jadwal.html, javascript.html, kode.gs, konter_list.html, Log.html, login.html, report.html, stylesheet.html, validasi.html
+Warna Tema: {primary_theme_color}
+
+Buatkan instruksi desain UI/UX Figma lengkap untuk proyek Google Apps Script ini:
+1. Style & System: Modern, rapi, minimalis, responsive (Mobile & Desktop), menggunakan 8px grid system dan auto-layout.
+2. Layar Utama:
+   - Dashboard Admin (Ringkasan penjualan, status stok, tombol aksi cepat)
+   - Form Transaksi (Input penjualan/pulsa/paket data cepat dengan validasi)
+   - Tabel Inventaris & Stok (Filter, pencarian, badge status stok)
+   - Pengaturan & Laporan
+3. Komponen UI Kit: Button states (default, hover, active, disabled), Form inputs, Modal dialog, Toast notification, Data table, Card stats.
+4. Handoff Developer: Spesifikasi token warna/tipografi, ukuran komponen, dan pemetaan tombol UI ke fungsi skrip (.gs).

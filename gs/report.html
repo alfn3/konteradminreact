@@ -1,0 +1,558 @@
+<style>
+  /* ... css dashboard dll biarkan ... */
+
+  /* CSS KHUSUS PRINT A4 LANDSCAPE (3 KOLOM AMAN) */
+  @media print {
+    @page { 
+      size: A4 landscape; 
+      margin: 5mm; /* Margin Kertas Tipis */
+    }
+    
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    
+    #printArea {
+      position: absolute; 
+      left: 0; 
+      top: 0; 
+      width: 100%;
+      /* Hapus display: grid/flex agar tidak konflik di browser lama */
+      display: block; 
+      font-size: 0; /* Hapus spasi antar elemen inline */
+    }
+
+    .slip-card-print {
+      /* TEKNIK FLOATING: Lebih stabil untuk cetak */
+      display: inline-block;
+      vertical-align: top;
+      
+      /* Lebar 32% agar 3 slip (32+32+32 = 96%) muat dengan sisa ruang */
+      width: 32%; 
+      margin-right: 1%; 
+      margin-bottom: 15px;
+      height: 190mm;
+      
+      border: 1px solid #000;
+      padding: 5px;
+      background: white;
+      
+      font-family: 'Courier New', monospace;
+      font-size: 9pt; /* Gunakan Point (pt) untuk cetak */
+      line-height: 1.0;
+      
+      /* Mencegah slip terpotong */
+      break-inside: avoid; 
+      page-break-inside: avoid;
+      
+      box-sizing: border-box;
+    }
+    
+    /* Hilangkan margin kanan untuk elemen ke-3, 6, 9 dst */
+    .slip-card-print:nth-child(3n) {
+      margin-right: 0;
+    }
+    
+    .slip-card-print h3 { font-size: 12pt; margin: 1px 0 2px 0; text-align: center; font-weight: bold; }
+    .slip-card-print p { margin: 1px; text-align: center; font-size: 9pt; }
+    .slip-card-print hr { border-top: 1px dashed #000; margin: 3px 0; }
+    
+    .slip-card-print table { width: 100%; border-collapse: collapse; }
+    .slip-card-print td { padding: 0; vertical-align: top; }
+    
+    .no-print { display: none !important; }
+  }
+  /* Custom Style untuk Report */
+  .nav-pills-report .nav-link {
+    border-radius: 50px;
+    padding: 10px 20px;
+    font-weight: 600;
+    color: #64748b;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    margin-right: 10px;
+    margin-bottom: 10px;
+    transition: all 0.3s;
+  }
+  .nav-pills-report .nav-link:hover {
+    background-color: #f1f5f9;
+    transform: translateY(-2px);
+  }
+  .nav-pills-report .nav-link.active {
+    background: linear-gradient(135deg, #0f172a 0%, #334155 100%); /* Warna Dark Blue */
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.3);
+  }
+  
+  /* Warna khusus untuk Tab Omset (Biru) */
+  .nav-pills-report .btn-tab-omset.active { background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%); }
+  /* Warna khusus untuk Tab Margin (Hijau) */
+  .nav-pills-report .btn-tab-margin.active { background: linear-gradient(135deg, #198754 0%, #146c43 100%); }
+  /* Warna khusus Tab Operasional (Kuning/Orange) */
+  .nav-pills-report .btn-tab-ops.active { background: linear-gradient(135deg, #fd7e14 0%, #b3560b 100%); }
+
+  /* Kartu Ringkasan di Tab Grafik */
+  .summary-card {
+    border: none;
+    border-radius: 16px;
+    padding: 20px;
+    color: white;
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  }
+  .summary-icon {
+    position: absolute;
+    right: -10px;
+    bottom: -10px;
+    font-size: 5rem;
+    opacity: 0.15;
+    transform: rotate(-15deg);
+  }
+</style>
+
+<div id="view-report" class="d-none page-section">
+  
+  <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-4 border-bottom">
+    <div>
+      <h2 class="fw-bold text-dark mb-0"><i class="fa-solid fa-chart-line me-2 text-primary"></i>Laporan Bulanan</h2>
+      <p class="text-muted small mb-0">Analisa performa, omset, dan margin.</p>
+    </div>
+    
+<div class="d-flex gap-2">
+      
+      <input type="file" id="fileImportCSV" accept=".csv" style="display: none;" onchange="processImportCSV(this)">
+
+      <button class="btn btn-outline-success fw-bold shadow-sm px-3" onclick="document.getElementById('fileImportCSV').click()">
+        <i class="fa-solid fa-file-import me-2"></i> Import CSV
+      </button>
+
+      <div id="btnExportGroup" class="btn-group shadow-sm d-none">
+        <button type="button" class="btn btn-success fw-bold dropdown-toggle px-3" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="fa-solid fa-download me-2"></i> Export
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li>
+            <a class="dropdown-item" href="" onclick="exportToCSV()">
+              <i class="fa-solid fa-file-csv me-2 text-success"></i> Download .CSV
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="" onclick="exportToExcel()">
+              <i class="fa-solid fa-file-excel me-2 text-success"></i> Download .XLS
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <button class="btn btn-primary fw-bold shadow-sm px-4" onclick="startLoadReport()">
+        <i class="fa-solid fa-play me-2"></i> Muat Data
+      </button>
+    </div>
+  </div>
+
+  <div id="progressContainer" class="d-none mb-4">
+    <div class="d-flex justify-content-between small fw-bold mb-1">
+      <span id="progressText">Memproses data...</span>
+      <span id="progressPercent">0%</span>
+    </div>
+    <div class="progress" style="height: 10px; border-radius: 10px;">
+      <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" style="width: 0%"></div>
+    </div>
+  </div>
+
+  <ul class="nav nav-pills nav-pills-report mb-4" id="reportTabs" role="tablist">
+    
+    <li class="nav-item">
+      <button class="nav-link active" id="tab-grafik-btn" data-bs-toggle="pill" data-bs-target="#tab-grafik">
+        <i class="fa-solid fa-chart-pie me-2"></i>GRAFIK & ANALISA
+      </button>
+    </li>
+
+    <li class="nav-item">
+      <button class="nav-link btn-tab-omset" id="tab-omset-btn" data-bs-toggle="pill" data-bs-target="#tab-omset">
+        <i class="fa-solid fa-money-bill-wave me-2"></i>DATA OMSET
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link btn-tab-margin" data-bs-toggle="pill" data-bs-target="#tab-margin">
+        <i class="fa-solid fa-sack-dollar me-2"></i>DATA MARGIN
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-terjual">
+        <i class="fa-solid fa-boxes-packing me-2"></i>TERJUAL
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link btn-tab-ops" data-bs-toggle="pill" data-bs-target="#tab-operasional">
+        <i class="fa-solid fa-users-gear me-2"></i>OPERASIONAL
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link btn-tab-insentif" data-bs-toggle="pill" data-bs-target="#tab-insentif">
+        <i class="fa-solid fa-gift me-2"></i>INSENTIF
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link btn-tab-bon" data-bs-toggle="pill" data-bs-target="#tab-bon">
+        <i class="fa-solid fa-file-invoice-dollar me-2"></i>DATA BON
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-slip">
+        <i class="fa-solid fa-print me-2"></i>SLIP GAJI
+      </button>
+    </li>
+  </ul>
+
+  <div class="tab-content" id="reportTabContent">
+    
+    <div class="tab-pane fade show active" id="tab-grafik">
+      
+      <div class="row g-3 mb-4">
+        <div class="col-md-3">
+          <div class="summary-card bg-primary bg-gradient">
+            <h6 class="text-white-50 text-uppercase fw-bold small">Total Omset</h6>
+            <h3 class="fw-bold mb-0" id="sum-omset">Rp 0</h3>
+            <i class="fa-solid fa-money-bill-wave summary-icon"></i>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="summary-card bg-success bg-gradient">
+            <h6 class="text-white-50 text-uppercase fw-bold small">Total Margin</h6>
+            <h3 class="fw-bold mb-0" id="sum-margin">Rp 0</h3>
+            <i class="fa-solid fa-chart-line summary-icon"></i>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="summary-card bg-warning bg-gradient text-dark">
+            <h6 class="text-dark-50 text-uppercase fw-bold small">Total Terjual (Pcs)</h6>
+            <h3 class="fw-bold mb-0" id="sum-terjual">0</h3>
+            <i class="fa-solid fa-box-open summary-icon text-dark"></i>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="summary-card bg-secondary bg-gradient">
+            <h6 class="text-white-50 text-uppercase fw-bold small">Data Terkumpul</h6>
+            <h3 class="fw-bold mb-0"><span id="sum-hari">0</span> Hari</h3>
+            <i class="fa-solid fa-calendar-check summary-icon"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-lg-8">
+          <div class="card shadow-sm border-0 rounded-4 h-100">
+            <div class="card-header bg-white border-0 pt-3 ps-3">
+              <h6 class="fw-bold mb-0 text-dark">Tren Harian (Omset vs Margin)</h6>
+            </div>
+            <div class="card-body">
+              <canvas id="chartTrend" style="max-height: 350px;"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="card shadow-sm border-0 rounded-4 h-100">
+            <div class="card-header bg-white border-0 pt-3 ps-3">
+              <h6 class="fw-bold mb-0 text-dark">Kontribusi Margin Toko</h6>
+            </div>
+            <div class="card-body d-flex align-items-center justify-content-center">
+              <canvas id="chartStore" style="max-height: 280px;"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-omset">
+      <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+        <div class="table-responsive" style="max-height: 70vh;">
+          <table class="table table-bordered table-striped table-hover mb-0 text-center align-middle" style="font-size: 0.75rem; white-space: nowrap;">
+            <thead class="table-dark sticky-top">
+              <tr>
+                <th rowspan="2" class="bg-primary text-white sticky-col">TANGGAL</th>
+                <th colspan="5" class="bg-dark">OMSET PERDANA & VC</th>
+                <th colspan="5" class="bg-secondary">OMSET ACC</th>
+                <th colspan="5" class="bg-dark">OMSET ELEKTRIK</th>
+              </tr>
+              <tr>
+                <th>M1</th><th>M2</th><th>TOKO</th><th>M4</th><th>JAYA</th>
+                <th>M1</th><th>M2</th><th>TOKO</th><th>M4</th><th>JAYA</th>
+                <th>M1</th><th>M2</th><th>TOKO</th><th>M4</th><th>JAYA</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-omset"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-margin">
+      <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+        <div class="table-responsive" style="max-height: 70vh;">
+          <table class="table table-bordered table-striped table-hover mb-0 text-center align-middle" style="font-size: 0.75rem; white-space: nowrap;">
+            <thead class="table-dark sticky-top">
+              <tr>
+                <th rowspan="2" class="bg-primary text-white sticky-col">TANGGAL</th>
+                <th colspan="5" class="bg-danger">MARGIN P & VC</th>
+                <th colspan="5" class="bg-secondary">MARGIN ACC</th>
+                <th colspan="5" class="bg-danger">MARGIN ELEKTRIK</th>
+                <th colspan="5" class="bg-success">TOTAL MARGIN</th>
+              </tr>
+              <tr>
+                <th>M1</th><th>M2</th><th>TOKO</th><th>M4</th><th>JAYA</th>
+                <th>M1</th><th>M2</th><th>TOKO</th><th>M4</th><th>JAYA</th>
+                <th>M1</th><th>M2</th><th>TOKO</th><th>M4</th><th>JAYA</th>
+                <th>M1</th><th>M2</th><th>TOKO</th><th>M4</th><th>JAYA</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-margin"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-terjual">
+      <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+        <div class="table-responsive" style="max-height: 70vh;">
+          <table class="table table-bordered table-striped table-hover mb-0 text-center align-middle" style="font-size: 0.75rem; white-space: nowrap;">
+            <thead class="table-dark sticky-top">
+              <tr>
+                <th rowspan="2" class="bg-primary text-white sticky-col">TANGGAL</th>
+                <th colspan="5" class="bg-info text-dark">TERJUAL (VC)</th>
+                <th colspan="5" class="bg-info text-dark">TERJUAL (SP)</th>
+                <th colspan="5" class="bg-secondary">TERJUAL (ACC)</th>
+              </tr>
+              <tr>
+                <th>M1</th><th>M2</th><th>TOKO</th><th>M4</th><th>JAYA</th>
+                <th>M1</th><th>M2</th><th>TOKO</th><th>M4</th><th>JAYA</th>
+                <th>M1</th><th>M2</th><th>TOKO</th><th>M4</th><th>JAYA</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-terjual"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-operasional">
+      <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+        <div class="table-responsive" style="max-height: 70vh;">
+          <table class="table table-bordered table-striped table-hover mb-0 text-center align-middle" style="font-size: 0.75rem; white-space: nowrap;">
+            <thead class="table-dark sticky-top">
+              <tr>
+                <th rowspan="2" class="bg-primary text-white sticky-col">TANGGAL</th>
+                <th colspan="5" class="bg-warning text-dark">SELISIH TOKO</th>
+                <th colspan="10" class="bg-light text-dark">INFO JAGA</th>
+                <th colspan="10" class="bg-warning text-dark">SELISIH JAGA</th>
+              </tr>
+              <tr>
+                <th>M1</th><th>M2</th><th>TOKO</th><th>M4</th><th>JAYA</th>
+                
+                <th>M1 Pagi</th><th>M1 Sore</th>
+                <th>M2 Pagi</th><th>M2 Sore</th>
+                <th>M3 Pagi</th><th>M3 Sore</th>
+                <th>M4 Pagi</th><th>M4 Sore</th>
+                <th>JY Pagi</th><th>JY Sore</th>
+
+                <th>M1 Pagi</th><th>M1 Sore</th>
+                <th>M2 Pagi</th><th>M2 Sore</th>
+                <th>M3 Pagi</th><th>M3 Sore</th>
+                <th>M4 Pagi</th><th>M4 Sore</th>
+                <th>JY Pagi</th><th>JY Sore</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-operasional"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="tab-pane fade" id="tab-insentif">
+      <div class="card shadow-sm border-0 rounded-4 mb-4">
+        <div class="card-header bg-white border-0 pt-3 ps-3">
+          <h6 class="fw-bold text-primary mb-0"><i class="fa-solid fa-users-viewfinder me-2"></i>Rincian Insentif Per Karyawan</h6>
+          <small class="text-muted">Klik nama karyawan untuk melihat detail pendapatan.</small>
+        </div>
+        <div class="card-body">
+          
+          <ul class="nav nav-tabs mb-3" id="insentifEmployeeTabs" role="tablist">
+             </ul>
+
+          <div class="tab-content" id="insentifEmployeeContent">
+             <div class="text-center py-5 text-muted small">
+               <i class="fa-solid fa-cloud-arrow-down fs-3 mb-2"></i><br>
+               Silakan klik tombol <b>"Muat Data"</b> di atas untuk menghitung insentif.
+             </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+<div class="tab-pane fade" id="tab-bon">
+      
+      <div class="card shadow-sm border-0 rounded-4">
+        
+        <div class="card-header bg-white border-0 pt-3 ps-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+          
+          <div>
+            <h6 class="fw-bold text-danger mb-0"><i class="fa-solid fa-file-invoice-dollar me-2"></i>Data Bon Karyawan</h6>
+            <small class="text-muted">Rekap pengambilan kasbon.</small>
+          </div>
+
+          <div class="d-flex gap-2">
+            
+            <div class="input-group input-group-sm" style="width: 160px;">
+               <span class="input-group-text bg-light"><i class="fa-regular fa-calendar"></i></span>
+               <input type="month" class="form-control fw-bold" id="filterBulanBon" onchange="loadDataBon()">
+            </div>
+            <button class="btn btn-sm btn-danger fw-bold rounded-pill px-3 shadow-sm" onclick="bukaModalInputBon()">
+              <i class="fa-solid fa-plus me-1"></i> Tambah
+            </button>
+          </div>
+
+        </div>
+        
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover table-bordered table-striped align-middle mb-0 table-sm" style="font-size: 0.85rem;">
+              <thead class="table-dark text-center">
+                <tr>
+                  <th style="width: 15%;">Tanggal</th>
+                  <th style="width: 20%;">Nama Karyawan</th>
+                  <th style="width: 15%;">Nominal</th>
+                  <th style="width: 40%;">Keterangan</th>
+                  <th style="width: 10%;">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-bon">
+                 <tr><td colspan="5" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-danger me-2"></div>Memuat data bon...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div> 
+<div class="modal fade" id="modalInputBon" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow rounded-4">
+        <div class="modal-header bg-danger text-white">
+          <h6 class="modal-title fw-bold" id="modalBonTitle"><i class="fa-solid fa-hand-holding-dollar me-2"></i>Input Bon Baru</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body bg-light">
+          <form id="formInputBon">
+            <input type="hidden" id="bonMode" value="tambah">
+            <input type="hidden" id="bonRowIndex">
+
+            <div class="mb-3">
+              <label class="form-label small fw-bold text-muted">Tanggal</label>
+              <input type="date" class="form-control" id="bonTanggal">
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label small fw-bold text-muted">Nama Karyawan</label>
+              <select class="form-select" id="bonNama">
+                <option value="" selected disabled>-- Pilih Karyawan --</option>
+                </select>
+              <div class="form-text text-muted" style="font-size: 0.65rem;">
+                *Nama diambil dari data Laporan Bulanan.
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label small fw-bold text-muted">Nominal (Rp)</label>
+              <div class="input-group">
+                <span class="input-group-text fw-bold bg-white text-danger">Rp</span>
+                <input type="text" class="form-control fw-bold text-danger" id="bonNominal" onkeyup="formatInputUang(this)" placeholder="0">
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label small fw-bold text-muted">Keterangan</label>
+              <textarea class="form-control" id="bonKet" rows="2" placeholder="Keperluan..."></textarea>
+            </div>
+
+          </form>
+        </div>
+        <div class="modal-footer border-0 pt-0 bg-light">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-sm btn-danger px-4 fw-bold" onclick="simpanBonBaru()">Simpan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="tab-pane fade" id="tab-slip">
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+        <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+           <div class="d-flex gap-2 align-items-center">
+              <input type="month" class="form-control fw-bold" id="bulanSlip" onchange="loadDataSlip()">
+              <button class="btn btn-dark rounded-pill px-4" onclick="loadDataSlip()">
+                <i class="fa-solid fa-calculator me-2"></i> Hitung
+              </button>
+           </div>
+           
+           <div class="d-flex gap-2">
+             <button class="btn btn-primary rounded-pill fw-bold" onclick="printSelectedSlips()">
+               <i class="fa-solid fa-print me-2"></i> Cetak Terpilih (A4)
+             </button>
+             <button class="btn btn-outline-dark rounded-pill" onclick="bukaModalGajiConfig()">
+               <i class="fa-solid fa-gear"></i> Atur Gaji
+             </button>
+           </div>
+        </div>  
+      </div>
+      <div id="slipContainer" class="row g-4">
+         <div class="col-12 text-center py-5 text-muted">
+           <i class="fa-solid fa-receipt fs-1 mb-3 opacity-25"></i><br>
+           Pilih bulan dan klik "Hitung Gaji" untuk generate slip.
+         </div>
+      </div>
+    </div>
+
+<div class="modal fade" id="modalConfigGaji" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header bg-dark text-white">
+          <h5 class="modal-title">Atur Gaji Pokok Karyawan</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          
+          <div class="d-flex gap-2 mb-3">
+             <button class="btn btn-sm btn-outline-success fw-bold" onclick="importKaryawanFromReport()">
+               <i class="fa-solid fa-cloud-arrow-down me-1"></i> Import Nama dari Laporan
+             </button>
+             <button class="btn btn-sm btn-outline-dark fw-bold" onclick="addRowGaji()">
+               <i class="fa-solid fa-plus me-1"></i> Tambah Manual
+             </button>
+          </div>
+
+          <table class="table table-bordered table-sm align-middle">
+            <thead class="table-light text-center">
+              <tr>
+                <th>Nama Karyawan</th>
+                <th width="30%">Gaji Pokok</th>
+                <th width="30%">Tunjangan</th>
+                <th width="15%">Hadir</th>
+                <th width="40px"></th>
+              </tr>
+            </thead>
+            <tbody id="tbody-config-gaji"></tbody>
+          </table>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-dark" onclick="simpanConfigGaji()">Simpan Perubahan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+<div id="printArea" class="d-none d-print-block">
+     </div>
+  </div> <table id="tableExportFull" style="display:none;"><thead id="thead-export"></thead><tbody id="tbody-export"></tbody></table>
+</div>

@@ -1,0 +1,98 @@
+<div id="view-validasi" class="page-section">
+  
+  <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fa-solid fa-check-to-slot me-2"></i>Data Akun Karyawan</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+      <div class="input-group me-2">
+        <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+        <input type="text" class="form-control" id="searchInput" placeholder="Cari Nama..." onkeyup="searchTable()">
+      </div>
+      <button type="button" class="btn btn-success" onclick="syncJadwalHarian()" title="Update status karyawan sesuai jadwal hari ini">
+        <i class="fa-solid fa-rotate me-1"></i> Sync Jadwal
+      </button>
+
+      <button type="button" class="btn btn-primary" onclick="loadData()">
+        <i class="fa-solid fa-arrows-rotate me-1"></i> Refresh
+      </button>
+    </div>
+  </div>
+
+  <div id="loading" class="text-center my-5">
+    <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
+  </div>
+
+  <div class="card shadow-sm d-none" id="tableContainer">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover table-bordered table-striped align-middle mb-0 table-sm" id="mainTable" style="font-size: 0.85rem;">
+          <thead class="table-dark text-center">
+            <tr class="text-nowrap">
+              <th scope="col" class="py-2 ps-3">Email</th>
+              <th scope="col" class="py-2">Nama</th>
+              <th scope="col" class="py-2">Shift</th>
+              <th scope="col" class="py-2">Konter</th>
+              <th scope="col" class="py-2">Status</th>
+              <th scope="col" class="py-2">Absensi</th>
+              <th scope="col" class="py-2 bg-light text-dark sticky-end" style="width: 100px;">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card-footer bg-white py-2">
+      <small class="text-muted" id="totalDataInfo">Menampilkan data...</small>
+    </div>
+  </div>
+  
+  <div class="modal fade" id="modalEdit" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title fw-bold"><i class="fa-solid fa-pen-to-square me-2"></i>Edit Karyawan</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formEdit">
+            <input type="hidden" id="editRowIndex">
+            
+            <div class="mb-3">
+              <label class="form-label small fw-bold mb-1">Email (ID)</label>
+              <input type="email" class="form-control bg-light" id="editEmail" readonly disabled>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label small fw-bold mb-1">Nama Lengkap</label>
+              <input type="text" class="form-control" id="editNama">
+            </div>
+            
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <label class="form-label small fw-bold mb-1">Shift Jaga</label>
+                <select class="form-select" id="editShift"></select>
+              </div>
+              <div class="col-6">
+                <label class="form-label small fw-bold mb-1">Status Akun</label>
+                <select class="form-select" id="editStatus"></select>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label small fw-bold mb-1">Konter</label>
+              <select class="form-select" id="editKonter"></select>
+              <div class="form-text text-muted small" style="font-size: 0.7rem;">*Data opsi diambil dari sheet.</div>
+            </div>
+
+          </form>
+        </div>
+        <div class="modal-footer p-2 bg-light">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-sm btn-primary px-4" onclick="simpanEdit()">
+            <i class="fa-solid fa-floppy-disk me-1"></i> Simpan
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

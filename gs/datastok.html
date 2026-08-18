@@ -1,0 +1,298 @@
+<div id="view-stok" class="d-none page-section">
+  
+  <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    
+    <div>
+      <h1 class="h2"><i class="fa-solid fa-boxes-stacked me-2"></i>Data Stok Produk</h1>
+    </div>
+
+    <div class="btn-toolbar mb-2 mb-md-0 gap-2">
+      
+      <div class="input-group input-group-sm">
+         <span class="input-group-text"><i class="fa-regular fa-calendar-days"></i></span>
+         <input type="date" class="form-control fw-bold" id="pilihTanggalStok" onchange="loadDataStok()">
+      </div>
+      
+      <div class="input-group input-group-sm">
+        <span class="input-group-text"><i class="fa-solid fa-store"></i></span>
+        <select class="form-select fw-bold" id="pilihTokoStok" onchange="loadDataStok()">
+          <option value="m1" selected>Toko M1</option>
+          <option value="m2">Toko M2</option>
+          <option value="m2 sore">Toko M2_sore</option>
+          <option value="toko">Toko M3</option>
+          <option value="toko sore">Toko M3_sore</option>
+          <option value="m4">Toko M4</option>
+        </select>
+      </div>
+
+      <div class="d-flex align-items-center px-2 py-0 rounded-pill border bg-info bg-opacity-10 border-info text-info">
+           <i class="fa-solid fa-user-clock me-1 small"></i>
+           <span class="small fw-bold me-1">Jaga:</span>
+           <span id="valInfoJaga" class="fw-bold small text-dark">...</span>
+        </div>
+
+        <div id="badgeSelisih" class="d-none align-items-center px-2 py-0 rounded-pill border bg-light">
+           <i id="iconSelisih" class="fa-solid fa-circle-check me-1 small"></i>
+           <span class="small fw-bold me-1">Selisih:</span>
+           <span id="valSelisih" class="fw-bold small">Rp 0</span>
+        </div>
+      
+      <button type="button" class="btn btn-sm btn-primary" onclick="loadDataStok()">
+        <i class="fa-solid fa-arrows-rotate me-1"></i> Refresh
+      </button>
+    </div>
+  </div>
+
+  <div id="loadingStok" class="text-center my-5 d-none">
+    <div class="spinner-border text-primary" role="status"></div>
+  </div>
+
+  <div id="contentStok" class="d-none">
+    
+    <ul class="nav nav-pills mb-3 small" id="pills-tab" role="tablist">
+      <li class="nav-item"><button class="nav-link active fw-bold" id="tab-perdana" data-bs-toggle="pill" data-bs-target="#content-perdana">PERDANA</button></li>
+      <li class="nav-item"><button class="nav-link fw-bold" id="tab-voucher" data-bs-toggle="pill" data-bs-target="#content-voucher">VOUCHER</button></li>
+      <li class="nav-item"><button class="nav-link fw-bold" id="tab-acc" data-bs-toggle="pill" data-bs-target="#content-acc">AKSESORIS</button></li>
+      
+      <li class="nav-item border-start mx-2"></li>
+
+      <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#content-pengeluaran"><i class="fa-solid fa-money-bill-transfer me-1"></i>PENGELUARAN</button></li>
+      <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#content-uang"><i class="fa-solid fa-wallet me-1"></i>UANG</button></li>
+      <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#content-elektrik"><i class="fa-solid fa-bolt me-1"></i>ELEKTRIK</button></li>
+    </ul>
+
+    <div class="tab-content">
+      
+      <div class="tab-pane fade show active" id="content-perdana">
+        <div class="card shadow-sm">
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover table-bordered table-striped align-middle mb-0 table-sm text-nowrap" style="font-size: 0.85rem;">
+                <thead class="table-dark text-center">
+                  <tr>
+                    <th style="width:25%" class="py-2">Nama Produk</th>
+                    <th style="width:10%" class="py-2">Awal</th>
+                    <th style="width:10%" class="py-2">Topup</th>
+                    <th style="width:10%" class="py-2">Akhir</th>
+                    <th style="width:10%" class="py-2">Laku</th>
+                    <th style="width:12%" class="py-2">Harga</th>
+                    <th style="width:15%" class="py-2">Total</th>
+                    <th style="width:8%" class="py-2">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-perdana"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="content-voucher">
+        <div class="card shadow-sm">
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover table-bordered table-striped align-middle mb-0 table-sm text-nowrap" style="font-size: 0.85rem;">
+                <thead class="table-dark text-center">
+                  <tr>
+                    <th style="width:25%" class="py-2">Nama Produk</th>
+                    <th style="width:10%" class="py-2">Awal</th>
+                    <th style="width:10%" class="py-2">Topup</th>
+                    <th style="width:10%" class="py-2">Akhir</th>
+                    <th style="width:10%" class="py-2">Laku</th>
+                    <th style="width:12%" class="py-2">Harga</th>
+                    <th style="width:15%" class="py-2">Total</th>
+                    <th style="width:8%" class="py-2">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-voucher"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="content-acc">
+        <div class="card shadow-sm">
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover table-bordered table-striped align-middle mb-0 table-sm text-nowrap" style="font-size: 0.85rem;">
+                <thead class="table-dark text-center">
+                  <tr>
+                    <th style="width:25%" class="py-2">Nama Produk</th>
+                    <th style="width:10%" class="py-2">Awal</th>
+                    <th style="width:10%" class="py-2">Topup</th>
+                    <th style="width:10%" class="py-2">Akhir</th>
+                    <th style="width:10%" class="py-2">Laku</th>
+                    <th style="width:12%" class="py-2">Harga</th>
+                    <th style="width:15%" class="py-2">Total</th>
+                    <th style="width:8%" class="py-2">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-acc"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="content-pengeluaran">
+        <div class="card shadow-sm">
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover table-bordered table-striped align-middle mb-0 table-sm" style="font-size: 0.85rem;">
+                <thead class="table-dark text-center">
+                  <tr>
+                    <th style="width: 10%;" class="py-2">No</th>
+                    <th style="width: 25%;" class="py-2">Nominal</th>
+                    <th style="width: 50%;" class="py-2">Keterangan</th>
+                    <th style="width: 15%;" class="py-2">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-pengeluaran"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="content-uang">
+        <div class="card shadow-sm">
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover table-bordered table-striped align-middle mb-0 table-sm" style="font-size: 0.85rem;">
+                <thead class="table-dark text-center">
+                  <tr>
+                    <th class="ps-3 py-2 text-start">Rincian Uang (K48 - K57)</th>
+                    <th style="width: 15%;" class="py-2">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-uang"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="content-elektrik">
+        <div class="card shadow-sm">
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover table-bordered table-striped align-middle mb-0 table-sm" style="font-size: 0.85rem;">
+                <thead class="table-dark text-center">
+                  <tr>
+                    <th style="width: 25%;" class="py-2">Saldo Awal</th>
+                    <th style="width: 25%;" class="py-2">Top Up</th>
+                    <th style="width: 25%;" class="py-2">Saldo Akhir</th>
+                    <th style="width: 25%;" class="py-2">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-elektrik"></tbody>
+              </table>
+            </div>
+            <div class="p-2 small text-muted bg-light border-top">
+              <i class="fa-solid fa-circle-info me-1"></i>
+              Saldo Akhir dihitung otomatis oleh Spreadsheet.
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div> </div> <div class="modal fade" id="modalEditStok" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white py-2">
+          <h6 class="modal-title fw-bold"><i class="fa-solid fa-pen-to-square me-2"></i>Update Stok</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formEditStok">
+            <input type="hidden" id="e_realRow"><input type="hidden" id="e_harga">
+            
+            <div class="mb-3">
+              <label class="form-label small text-muted mb-1">Nama Produk</label>
+              <input type="text" class="form-control fw-bold bg-light" id="e_nama" readonly>
+            </div>
+            
+            <div class="row g-2 mb-3">
+              <div class="col-4">
+                <label class="form-label fw-bold small text-center d-block mb-1">Stok Awal</label>
+                <input type="number" class="form-control border-warning text-center fw-bold" id="e_awal" oninput="hitungLiveModal()">
+              </div>
+              <div class="col-4">
+                <label class="form-label fw-bold small text-center d-block mb-1">Topup</label>
+                <input type="number" class="form-control border-info text-center fw-bold" id="e_topup" oninput="hitungLiveModal()">
+              </div>
+              <div class="col-4">
+                <label class="form-label fw-bold small text-center d-block mb-1">Stok Akhir</label>
+                <input type="number" class="form-control border-success text-center fw-bold" id="e_stokAkhir" oninput="hitungLiveModal()">
+              </div>
+            </div>
+            
+            <div class="bg-light p-2 rounded border">
+               <div class="d-flex justify-content-between small mb-1">
+                 <span class="text-muted">Terjual (Laku):</span>
+                 <span class="fw-bold text-success" id="view_laku">0</span>
+               </div>
+               <div class="d-flex justify-content-between align-items-center border-top pt-1 mt-1">
+                 <span class="text-muted fw-bold small">Total:</span>
+                 <h6 class="mb-0 fw-bold text-primary" id="view_total">Rp 0</h6>
+               </div>
+            </div>
+
+          </form>
+        </div>
+        <div class="modal-footer py-1 bg-light">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-sm btn-primary" onclick="simpanStokViaModal()">Simpan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalEditPengeluaran" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white py-2">
+          <h6 class="modal-title fw-bold">Edit Pengeluaran No. <span id="p_no_text"></span></h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+           <input type="hidden" id="p_no">
+           <div class="mb-2">
+             <label class="form-label small fw-bold mb-1">Nominal</label>
+             <input type="number" class="form-control" id="p_nominal">
+           </div>
+           <div class="mb-2">
+             <label class="form-label small fw-bold mb-1">Keterangan</label>
+             <textarea class="form-control" id="p_ket" rows="3"></textarea>
+           </div>
+        </div>
+        <div class="modal-footer p-1">
+          <button type="button" class="btn btn-sm btn-danger w-100" onclick="simpanPengeluaran()">Simpan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalEditUang" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <div class="modal-content">
+        <div class="modal-header bg-secondary text-white py-2">
+          <h6 class="modal-title fw-bold">Edit List Uang</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+           <input type="hidden" id="u_index">
+           <div class="mb-2">
+             <label class="form-label small fw-bold mb-1">Isi List</label>
+             <input type="text" class="form-control" id="u_nilai">
+           </div>
+        </div>
+        <div class="modal-footer p-1">
+          <button type="button" class="btn btn-sm btn-secondary w-100" onclick="simpanUang()">Simpan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
