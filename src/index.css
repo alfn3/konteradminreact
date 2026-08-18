@@ -17,3 +17,9 @@
 body {
   @apply bg-slate-50 text-slate-800 antialiased;
 }
+
+@media print {
+  body * { visibility: hidden; }
+  #print-area, #print-area * { visibility: visible; }
+  #print-area { position: absolute; left: 0; top: 0; width: 100%; }
+}

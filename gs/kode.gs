@@ -1029,13 +1029,47 @@ function batchUpdateStok(params) {
         // Jika sheet adalah "x sore" → target adalah "x pagi" di T+1
         // Jika sheet adalah "x pagi" → tidak ada sync antar hari (rumus menangani pagi→sore hari yang sama)
         // Jika sheet tidak punya suffix pagi/sore → sync ke sheet yang sama di T+1
+        
+        // 1. Ambil data konter_list dari ssAdmin
+        const ssAdminSync = SpreadsheetApp.openById(FILES.ADMIN);
+        const sheetKonterSync = ssAdminSync.getSheetByName("konter_list");
+        const rawKonterSync = sheetKonterSync ? sheetKonterSync.getRange("A2:B").getValues().filter(r => r[0]) : [];
+        const listKonterSync = rawKonterSync.map(r => ({ konterId: String(r[0]).toLowerCase().trim(), sheet: String(r[1] || r[0]).trim() }));
+        
+        // 2. Cari konterId berdasarkan tokoName (nama sheet saat ini)
+        let currentKonterId = null;
+        for (let i = 0; i < listKonterSync.length; i++) {
+           if (listKonterSync[i].sheet === tokoName.trim()) {
+              currentKonterId = listKonterSync[i].konterId;
+              break;
+           }
+        }
+        
+        // Jika tidak ditemukan di konter_list, gunakan fallback lama
+        if (!currentKonterId) currentKonterId = tokoLower;
+        
         var targetSheetName = null;
-        if (tokoLower.indexOf('sore') !== -1) {
-          // Ganti "sore" dengan "pagi" (jaga kapitalisasi asli)
-          targetSheetName = tokoName.replace(/sore/gi, function(match) {
-            return match[0] === match[0].toUpperCase() ? 'Pagi' : 'pagi';
-          });
-        } else if (tokoLower.indexOf('pagi') !== -1) {
+        
+        if (currentKonterId.indexOf('sore') !== -1) {
+          // Ganti "sore" dengan "pagi" pada konterId
+          const targetKonterId = currentKonterId.replace(/sore/gi, 'pagi').trim();
+          
+          // Cari sheet target berdasarkan targetKonterId
+          for (let i = 0; i < listKonterSync.length; i++) {
+             if (listKonterSync[i].konterId === targetKonterId) {
+                targetSheetName = listKonterSync[i].sheet;
+                break;
+             }
+          }
+          
+          // Fallback lama jika tidak ketemu
+          if (!targetSheetName) {
+            targetSheetName = tokoName.replace(/sore/gi, function(match) {
+              return match[0] === match[0].toUpperCase() ? 'Pagi' : 'pagi';
+            });
+          }
+          
+        } else if (currentKonterId.indexOf('pagi') !== -1) {
           // Pagi → tidak perlu sync antar hari
           syncInfo = 'Sync antar hari dilewati (Murni Spreadsheet)';
           Logger.log('Skip sync: ' + tokoName + ' pagi dihandle rumus spreadsheet');
@@ -1745,6 +1779,7 @@ function doPost(e) {
     else if (action === 'getGajiConfig') result = getGajiConfig();
     else if (action === 'saveGajiConfig') result = saveGajiConfig(args[0]);
     else if (action === 'getDataGajiDanBon') result = getDataGajiDanBon(args[0]);
+    else if (action === 'getReportDataBulanan') result = getReportDataBulanan(args[0]);
     
     // Tambahkan action lain sesuai kebutuhan
     else {
@@ -1758,5 +1793,23 @@ function doPost(e) {
   } catch (error) {
     return ContentService.createTextOutput(JSON.stringify({ error: true, message: error.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// =========================================
+// FITUR: BACA DATA BULANAN LANGSUNG DARI SHEET "data bulanan"
+// =========================================
+function getReportDataBulanan(bulanFilter) {
+  try {
+    const ss = SpreadsheetApp.openById(FILES.ADMIN);
+    const sheet = ss.getSheetByName("data bulanan");
+    if (!sheet) {
+      return { success: false, error: "Sheet 'data bulanan' tidak ditemukan di Spreadsheet Admin." };
+    }
+    
+    const data = sheet.getDataRange().getDisplayValues();
+    return { success: true, data: data };
+  } catch (e) {
+    return { success: false, error: e.toString() };
   }
 }
