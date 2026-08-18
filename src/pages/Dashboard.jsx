@@ -2,18 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { gasService } from '../services/gas';
 import { Loader2 } from 'lucide-react';
 
-const announcements = [
-  { id: 1, title: 'Briefing Bulanan Agustus 2026', date: '15 Agu 2026', tag: 'Penting', color: '#EF4444' },
-  { id: 2, title: 'Update Harga Voucher XL & Telkomsel', date: '12 Agu 2026', tag: 'Operasional', color: '#0D6EFD' },
-  { id: 3, title: 'Jadwal Libur 17 Agustus 2026', date: '10 Agu 2026', tag: 'Umum', color: '#10B981' },
-];
 
-const jadwalHariIni = [
-  { nama: 'Budi Santoso', shift: 'Pagi 07:00 - 14:00', toko: 'M1', color: '#3B82F6', absen: true },
-  { nama: 'Rina Fitriani', shift: 'Pagi 07:00 - 14:00', toko: 'M2', color: '#10B981', absen: false },
-  { nama: 'Ahmad Fauzan', shift: 'Sore 14:00 - 21:00', toko: 'M1', color: '#3B82F6', absen: true },
-  { nama: 'Dewi Lestari', shift: 'Sore 14:00 - 21:00', toko: 'M3', color: '#F59E0B', absen: true },
-];
 
 function fmt(n) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n || 0);
@@ -99,7 +88,8 @@ export default function Dashboard({ addToast }) {
 
   const stats = data.stats || {};
   const laporan = data.laporan || [];
-  const totalOmzet = laporan.reduce((a, s) => a + (s.omset || 0), 0);
+  const totalOmzet = data.finance?.now?.omset || laporan.reduce((a, s) => a + (s.omset || 0), 0);
+  const totalMargin = data.finance?.now?.margin || laporan.reduce((a, s) => a + (s.margin || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -192,7 +182,7 @@ export default function Dashboard({ addToast }) {
         <div className="lg:col-span-2 bg-white rounded-xl p-5" style={{ border: '1px solid #E2E8F0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h2 className="text-sm font-semibold text-slate-800">Performa Outlet (Kemarin)</h2>
+              <h2 className="text-sm font-semibold text-slate-800">Ringkasan Per Konter</h2>
               <p className="text-xs text-slate-400">Rincian Laporan {data.tglKemarin}</p>
             </div>
             <button 
@@ -254,32 +244,10 @@ export default function Dashboard({ addToast }) {
             </button>
           </div>
           <div className="space-y-3">
-            {announcements.map((a) => (
-              <div
-                key={a.id}
-                className="flex gap-3 p-3 rounded-lg cursor-pointer hover:bg-slate-50"
-                style={{ border: '1px solid #F1F5F9' }}
-              >
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-white text-sm"
-                  style={{ background: a.color }}
-                >
-                  📣
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-slate-800 leading-tight truncate">{a.title}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span
-                      className="text-[10px] px-1.5 py-0.5 rounded font-medium"
-                      style={{ background: `${a.color}15`, color: a.color }}
-                    >
-                      {a.tag}
-                    </span>
-                    <span className="text-xs text-slate-400">{a.date}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+            {/* Tidak ada announcements dari API, tampilkan pesan kosong */}
+            <div className="text-center text-slate-500 text-sm py-4">
+              Tidak ada informasi terbaru.
+            </div>
           </div>
           <button
             className="w-full mt-3 py-2 rounded-lg text-xs font-medium text-center cursor-pointer"
@@ -294,45 +262,32 @@ export default function Dashboard({ addToast }) {
       {/* Jadwal Hari Ini (Mock) */}
       <div className="bg-white rounded-xl p-5" style={{ border: '1px solid #E2E8F0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-slate-800">Jadwal Jaga Hari Ini (Simulasi)</h2>
+          <h2 className="text-sm font-semibold text-slate-800">Jadwal Jaga Hari Ini</h2>
           <span className="text-xs text-slate-400">{new Date().toLocaleDateString('id-ID')}</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {jadwalHariIni.map((j) => (
+          {data?.laporan?.filter(l => l.jaga && l.jaga !== '-').map((j, idx) => (
             <div
-              key={j.nama}
+              key={idx}
               className="flex items-center gap-3 p-3 rounded-lg"
-              style={{ background: j.absen ? '#F8FAFC' : '#FEF9C3', border: `1px solid ${j.absen ? '#E2E8F0' : '#FDE68A'}` }}
+              style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}
             >
               <div
-                className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                style={{ background: j.color }}
+                className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 bg-blue-500"
               >
-                {j.nama.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                {j.jaga.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-800 truncate">{j.nama}</p>
-                <p className="text-xs text-slate-500 truncate">{j.shift}</p>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <span
-                    className="text-[10px] px-1.5 py-0.5 rounded font-medium"
-                    style={{ background: `${j.color}15`, color: j.color }}
-                  >
-                    {j.toko}
-                  </span>
-                  <span
-                    className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                    style={{
-                      background: j.absen ? '#DCFCE7' : '#FEF9C3',
-                      color: j.absen ? '#15803D' : '#92400E',
-                    }}
-                  >
-                    {j.absen ? '✓ Hadir' : '⚠️ Belum'}
-                  </span>
-                </div>
+                <p className="text-sm font-medium text-slate-800 truncate capitalize">{j.jaga}</p>
+                <p className="text-xs text-slate-500 truncate uppercase">{j.toko}</p>
               </div>
             </div>
           ))}
+          {(!data?.laporan || data.laporan.filter(l => l.jaga && l.jaga !== '-').length === 0) && (
+            <div className="col-span-full p-4 text-center text-slate-500 text-sm">
+              Belum ada karyawan yang tercatat jaga hari ini.
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Package, Search, Calendar, Store, Plus, FileSpreadsheet, Loader2, RefreshCw, Save, Eye, EyeOff, Edit2, Lock, Unlock } from 'lucide-react';
 import { gasService } from '../services/gas';
 
+
 const DataStok = ({ addToast }) => {
   const [activeTab, setActiveTab] = useState('perdana');
   const [toko, setToko] = useState(''); // Akan di-set setelah fetch konter
   const [konterOptions, setKonterOptions] = useState([]);
+  const [storeColors, setStoreColors] = useState({});
   
   // Tanggal default: Hari ini (YYYY-MM-DD)
   const [tanggal, setTanggal] = useState(() => {
@@ -59,12 +61,19 @@ const DataStok = ({ addToast }) => {
     try {
       const res = await gasService.call('getDataKonterList');
       if (!res.error && res.data) {
-        // res.data array of rows. [0] is Konter Name, [1] is Nama Sheet
+        // res.data array of rows. [0] is Konter Name, [1] is Nama Sheet, [3] is Warna
         const options = res.data.map(item => ({
           label: item[0] || 'Unknown',
           value: item[1] || item[0] || '' // Gunakan Nama Sheet (col 1), jika kosong gunakan Nama Konter
         }));
         setKonterOptions(options);
+        
+        // Build storeColors mapping
+        const colors = {};
+        res.data.forEach(item => {
+          if (item[0]) colors[item[0]] = item[3] || '#3B82F6';
+        });
+        setStoreColors(colors);
         
         // Auto select first option if toko is empty
         if (!toko && options.length > 0) {
@@ -461,7 +470,7 @@ const DataStok = ({ addToast }) => {
     if (activeTab === 'elektrik') {
       const renderEditableElektrik = (item, field, val) => {
         const isEditing = editingCell?.row === item.realRow && editingCell?.field === field;
-        if (isEditing) {
+        if (isEditing && isEditMode) {
           let editValue = modifiedElektrik[item.realRow]?.[field] ?? (item[field] || '');
           if (typeof editValue === 'string') {
             editValue = editValue.replace(/[^0-9]/g, '');
@@ -483,12 +492,12 @@ const DataStok = ({ addToast }) => {
         
         return (
           <div 
-            className="group flex items-center justify-center cursor-pointer p-1.5 rounded transition-colors hover:bg-slate-200/50 min-h-[2.5rem]"
-            onClick={() => setEditingCell({ row: item.realRow, field })}
-            title="Klik untuk edit"
+            className={`group flex items-center justify-center p-1.5 rounded transition-colors min-h-[2.5rem] ${isEditMode ? 'cursor-pointer hover:bg-slate-200/50' : ''}`}
+            onClick={() => isEditMode && setEditingCell({ row: item.realRow, field })}
+            title={isEditMode ? "Klik untuk edit" : ""}
           >
             <span>{val || '-'}</span>
-            <Edit2 className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover:opacity-100 ml-2 transition-opacity flex-shrink-0" />
+            {isEditMode && <Edit2 className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover:opacity-100 ml-2 transition-opacity flex-shrink-0" />}
           </div>
         );
       };
@@ -538,7 +547,7 @@ const DataStok = ({ addToast }) => {
     if (activeTab === 'uang') {
       const renderEditableUang = (item, val) => {
         const isEditing = editingCell?.row === item.row;
-        if (isEditing) {
+        if (isEditing && isEditMode) {
           return (
             <div className="flex items-center p-1 rounded bg-white shadow-sm ring-1 ring-primary/50 w-full max-w-[250px]">
               <input 
@@ -556,12 +565,12 @@ const DataStok = ({ addToast }) => {
         
         return (
           <div 
-            className="group flex items-center cursor-pointer p-1.5 rounded transition-colors hover:bg-slate-200/50 min-h-[2.5rem]"
-            onClick={() => setEditingCell({ row: item.row, field: 'list' })}
-            title="Klik untuk edit"
+            className={`group flex items-center p-1.5 rounded transition-colors min-h-[2.5rem] ${isEditMode ? 'cursor-pointer hover:bg-slate-200/50' : ''}`}
+            onClick={() => isEditMode && setEditingCell({ row: item.row, field: 'list' })}
+            title={isEditMode ? "Klik untuk edit" : ""}
           >
             <span>{val || '-'}</span>
-            <Edit2 className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover:opacity-100 ml-2 transition-opacity flex-shrink-0" />
+            {isEditMode && <Edit2 className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover:opacity-100 ml-2 transition-opacity flex-shrink-0" />}
           </div>
         );
       };
@@ -623,10 +632,15 @@ const DataStok = ({ addToast }) => {
           <select 
             value={toko}
             onChange={(e) => setToko(e.target.value)}
-            className="text-xs text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 outline-none cursor-pointer"
+            className="text-xs font-bold rounded-lg px-3 py-1.5 outline-none cursor-pointer transition-colors shadow-sm"
+            style={{ 
+               backgroundColor: toko ? (storeColors[konterOptions.find(o => o.value === toko)?.label] || storeColors[toko] || '#3B82F6') : '#3B82F6', 
+               color: '#fff',
+               border: 'none'
+            }}
           >
             {konterOptions.map((opt, idx) => (
-              <option key={idx} value={opt.value}>{opt.label}</option>
+              <option key={idx} value={opt.value} className="bg-white text-slate-800 font-medium">{opt.label}</option>
             ))}
           </select>
         )}

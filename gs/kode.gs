@@ -54,27 +54,24 @@ function getDashboardStats() {
     const strPrevDisplay = formatDateIndoFull(datePrev);
 
     // ---------------------------------------------------
+    // ---------------------------------------------------
 
     // Cari ID pakai Format Search
     const idYst = findFileId(ssAdmin, "file30h", strYstSearch);
     const idPrev = findFileId(ssAdmin, "file30h_before", strPrevSearch);
 
-    // Ambil Data Keuangan
-    const finMapNow = getFinancialMap(idYst);
-    const finMapPrev = getFinancialMap(idPrev);
-
-    // Hitung Total Global
-    const totalOmsetNow = Object.values(finMapNow).reduce((a, b) => a + b.omset, 0);
-    const totalMarginNow = Object.values(finMapNow).reduce((a, b) => a + b.margin, 0);
-    const totalOmsetPrev = Object.values(finMapPrev).reduce((a, b) => a + b.omset, 0);
-    const totalMarginPrev = Object.values(finMapPrev).reduce((a, b) => a + b.margin, 0);
+    // Laporan Kemarin & Total
+    const reportKemarin = [];
+    let totalOmsetNow = 0;
+    let totalMarginNow = 0;
+    let totalOmsetPrev = 0;
+    let totalMarginPrev = 0;
 
     // ... (Bagian Data Konter, Absen, Info BIARKAN SAMA) ...
-    // Copy paste logika existing di sini untuk stats lainnya...
     const sheetKonter = ssAdmin.getSheetByName("konter_list");
-    const rawKonter = sheetKonter ? sheetKonter.getRange("A2:A").getValues().filter(r => r[0]) : [];
+    const rawKonter = sheetKonter ? sheetKonter.getRange("A2:B").getValues().filter(r => r[0]) : [];
     const totalKonter = rawKonter.length;
-    const listKonter = rawKonter.map(r => r[0]); 
+    const listKonter = rawKonter.map(r => ({ nama: r[0], sheet: r[1] || r[0] })); 
 
     const sheetVal = ssAdmin.getSheetByName("validasi");
     const dataVal = sheetVal ? sheetVal.getDataRange().getValues() : [];
@@ -99,46 +96,48 @@ function getDashboardStats() {
        if(st === 'TRUE' || st === 'ON' || st === 'AKTIF') infoAktif++;
     }
 
-    // Laporan Kemarin
-    const reportKemarin = [];
     if (idYst) {
       try {
         const ssStok = SpreadsheetApp.openById(idYst);
-        const sheetBulanan = ssStok.getSheetByName("data bulanan");
-        let finMap = {}; 
-        if(sheetBulanan) {
-           const vals = sheetBulanan.getRange("B39:AE39").getValues()[0];
-           const keys = ["m1", "m2", "m3", "m4", "jayacell"]; 
-           keys.forEach((k, idx) => {
-              const omset = (vals[idx]||0) + (vals[idx+5]||0) + (vals[idx+10]||0);
-              const margin = (vals[idx+15]||0) + (vals[idx+20]||0) + (vals[idx+25]||0);
-              finMap[k] = { omset: omset, margin: margin };
-           });
+        let ssPrev = null;
+        if (idPrev) {
+          try { ssPrev = SpreadsheetApp.openById(idPrev); } catch(e) {}
         }
 
-        listKonter.forEach(namaToko => {
-          let targetSheet = namaToko;
-          let keyFin = String(namaToko).toLowerCase().trim();
-          if (keyFin === 'm3') targetSheet = 'toko';
-          if (keyFin === 'm3 sore') { targetSheet = 'toko sore'; keyFin = 'm3'; } 
-          if (keyFin === 'jaya' || keyFin.includes('jaya')) keyFin = 'jayacell';
-
+        listKonter.forEach(knt => {
+          const namaToko = knt.nama;
+          const targetSheet = knt.sheet;
+          
           const sh = ssStok.getSheetByName(targetSheet);
           const jaga = sh ? (sh.getRange("Q35").getDisplayValue() || "-") : "-";
           const selisih = sh ? (sh.getRange("N44").getValue() || 0) : 0;
-          const finData = finMap[keyFin] || { omset: 0, margin: 0 };
+          
+          // Ambil Omset dari cell N38 (dan margin O38 jika ada)
+          const omset = sh ? (Number(sh.getRange("N38").getValue()) || 0) : 0;
+          const margin = sh ? (Number(sh.getRange("O38").getValue()) || 0) : 0;
           
           // Data Prev per toko
-          const dataPrev = finMapPrev[keyFin] || { omset: 0, margin: 0 };
+          let omsetPrev = 0;
+          let marginPrev = 0;
+          if (ssPrev) {
+            const shPrev = ssPrev.getSheetByName(targetSheet);
+            omsetPrev = shPrev ? (Number(shPrev.getRange("N38").getValue()) || 0) : 0;
+            marginPrev = shPrev ? (Number(shPrev.getRange("O38").getValue()) || 0) : 0;
+          }
+
+          totalOmsetNow += omset;
+          totalMarginNow += margin;
+          totalOmsetPrev += omsetPrev;
+          totalMarginPrev += marginPrev;
 
           reportKemarin.push({
             toko: namaToko,
             jaga: jaga,
             selisih: selisih,
-            omset: finData.omset,
-            margin: finData.margin,
-            omsetPrev: dataPrev.omset, // Data Bulan Lalu Per Toko
-            marginPrev: dataPrev.margin
+            omset: omset,
+            margin: margin,
+            omsetPrev: omsetPrev, // Data Bulan Lalu Per Toko
+            marginPrev: marginPrev
           });
         });
       } catch (e) { reportKemarin.push({ error: true, msg: "Gagal" }); }
@@ -275,6 +274,14 @@ function getDataValidasi() {
     // Menggunakan Set untuk memastikan tidak ada nama konter ganda
     const rawKonter = dataKonter.map(row => row[0]); 
     const listKonter = [...new Set(rawKonter)].filter(String).sort(); 
+    
+    // 1b. Map Warna Konter: Kolom A -> Kolom D (Index 3)
+    const konterColors = {};
+    dataKonter.forEach(row => {
+      if(row[0] && row[3]) {
+        konterColors[row[0].trim()] = row[3];
+      }
+    });
 
     // 2. List Shift (Manual / Hardcoded sesuai request)
     const listShift = ["pagi", "sore", "full"]; 
@@ -289,6 +296,7 @@ function getDataValidasi() {
       options: {
         shift: listShift,
         konter: listKonter,
+        konterColors: konterColors,
         status: listStatus
       }
     };
@@ -1729,6 +1737,15 @@ function doPost(e) {
     else if (action === 'updateLogKoreksi') result = updateLogKoreksi(args[0], args[1]);
     else if (action === 'getReportFileList') result = getReportFileList();
     else if (action === 'getReportDetail') result = getReportDetail(args[0]);
+    // API Tambahan Laporan Bulanan
+    else if (action === 'getBonBulanan') result = getBonBulanan(args[0]);
+    else if (action === 'simpanBon') result = simpanBon(args[0]);
+    else if (action === 'editDataBon') result = editDataBon(args[0]);
+    else if (action === 'hapusBon') result = hapusBon(args[0]);
+    else if (action === 'getGajiConfig') result = getGajiConfig();
+    else if (action === 'saveGajiConfig') result = saveGajiConfig(args[0]);
+    else if (action === 'getDataGajiDanBon') result = getDataGajiDanBon(args[0]);
+    
     // Tambahkan action lain sesuai kebutuhan
     else {
       return ContentService.createTextOutput(JSON.stringify({ error: true, message: 'Action not found: ' + action }))
