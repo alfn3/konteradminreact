@@ -16,8 +16,10 @@ const LOG_CONFIG = {
 // --- FUNGSI UTAMA (DO GET) ---
 // =========================================
 function doGet(e) {
-  return ContentService.createTextOutput("API MobileCell Aktif dan Berjalan Normal.")
-    .setMimeType(ContentService.MimeType.TEXT);
+  return HtmlService.createHtmlOutputFromFile("index")
+    .setTitle("Admin Dashboard - MobileCell")
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 // =========================================

@@ -236,7 +236,7 @@ const DataStok = ({ addToast }) => {
       return (
         <div className="overflow-x-auto w-full">
           <table className="w-full text-sm text-left whitespace-nowrap">
-            <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+            <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 sticky top-0 z-10 shadow-sm">
               <tr>
                 <th className="px-4 py-3">No</th>
                 <th className="px-4 py-3">Provider / Brand</th>
@@ -257,7 +257,7 @@ const DataStok = ({ addToast }) => {
                 const topup = Number(mod?.topup ?? item.topup) || 0;
                 const akhir = Number(mod?.stokAkhir ?? item.stokAkhir) || 0;
                 return (awal > 0 || topup > 0 || akhir > 0);
-              }).map((item, idx) => {
+              }).map((item, idx, arr) => {
                 // Gunakan nilai yang dimodifikasi jika ada
                 const mod = modifiedStok[item.realRow];
                 const awalVal = mod?.stokAwal ?? item.stokAwal;
@@ -276,6 +276,14 @@ const DataStok = ({ addToast }) => {
                 let providerText = item.provider || '-';
                 if (activeTab === 'acc' && providerText === '-') {
                   providerText = 'KABEL DATA TOPLES';
+                }
+                
+                // Cek perubahan provider untuk border separator
+                let isProviderChanged = false;
+                if (idx > 0) {
+                  let prevProvider = arr[idx - 1].provider || '-';
+                  if (activeTab === 'acc' && prevProvider === '-') prevProvider = 'KABEL DATA TOPLES';
+                  isProviderChanged = providerText !== prevProvider;
                 }
                 
                 // Fungsi untuk mendapatkan warna badge unik berdasarkan nama provider
@@ -356,7 +364,7 @@ const DataStok = ({ addToast }) => {
                 };
                 
                 return (
-                  <tr key={idx} className="hover:bg-slate-50/50">
+                  <tr key={idx} className={`hover:bg-slate-50/50 ${isProviderChanged ? 'border-t-2 border-slate-300' : ''}`}>
                     <td className="px-4 py-3 text-slate-500">{idx + 1}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2.5 py-1 rounded-full text-xs whitespace-nowrap ${badgeClass}`}>
@@ -428,7 +436,7 @@ const DataStok = ({ addToast }) => {
       return (
         <div className="overflow-x-auto w-full p-4">
           <table className="w-full text-sm text-left">
-            <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+            <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 sticky top-0 z-10 shadow-sm">
               <tr>
                 <th className="px-4 py-3 w-16">No</th>
                 <th className="px-4 py-3 w-48">Nominal</th>
@@ -505,7 +513,7 @@ const DataStok = ({ addToast }) => {
       return (
         <div className="overflow-x-auto w-full p-4">
           <table className="w-full text-sm text-left">
-            <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+            <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 sticky top-0 z-10 shadow-sm">
               <tr>
                 <th className="px-4 py-3">No</th>
                 <th className="px-4 py-3 text-center">Saldo Awal</th>
@@ -582,7 +590,7 @@ const DataStok = ({ addToast }) => {
             <p className="text-sm text-slate-500">Klik baris nominal untuk mengedit fisik uang.</p>
           </div>
           <table className="w-full text-sm text-left max-w-md">
-            <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+            <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 sticky top-0 z-10 shadow-sm">
               <tr>
                 <th className="px-4 py-3 w-16">No</th>
                 <th className="px-4 py-3">Nominal Uang</th>

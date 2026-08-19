@@ -20,6 +20,7 @@ export default function Header({ title, onLogout }) {
           const notifs = errors.map((row, i) => ({
             id: i,
             text: `[${row[2] || 'Sistem'}] ${row[4] || row[3] || 'Aktivitas'} - ${row[6] || 'Gagal'}`,
+            komentar: row[5] || '',
             time: (row[0] || '').split(' ')[1] || row[0],
             type: 'warning'
           }));
@@ -36,9 +37,9 @@ export default function Header({ title, onLogout }) {
     };
     
     fetchNotifs();
-    // Opsional: Polling setiap 5 menit
-    // const interval = setInterval(fetchNotifs, 5 * 60 * 1000);
-    // return () => clearInterval(interval);
+    // Realtime polling setiap 10 detik
+    const interval = setInterval(fetchNotifs, 10 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const today = new Date().toLocaleDateString('id-ID', {
@@ -120,8 +121,13 @@ export default function Header({ title, onLogout }) {
                       ⚠️
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-slate-700 leading-snug">{n.text}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{n.time}</p>
+                      <p className="text-xs text-slate-700 leading-snug font-medium">{n.text}</p>
+                      {n.komentar && (
+                        <p className="text-xs text-slate-600 mt-1 p-1.5 rounded bg-slate-100 border border-slate-200">
+                          {n.komentar}
+                        </p>
+                      )}
+                      <p className="text-[10px] text-slate-400 mt-1">{n.time}</p>
                     </div>
                   </div>
                 ))
