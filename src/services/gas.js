@@ -73,7 +73,7 @@ export const gasService = {
       else if (SCRIPT_URL) {
         fetchWithRetry(functionName, args)
           .then(res => {
-            if (res && res.error) reject(new Error(res.message));
+            if (res && res.error) reject(new Error(res.message || (typeof res.error === 'string' ? res.error : 'Terjadi kesalahan pada server')));
             else resolve(res);
           })
           .catch(err => {

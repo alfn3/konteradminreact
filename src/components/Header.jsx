@@ -6,6 +6,14 @@ export default function Header({ title, onLogout }) {
   const [showProfile, setShowProfile] = useState(false)
   const [query, setQuery] = useState('')
   const [notifications, setNotifications] = useState([])
+  const [lastNotifCount, setLastNotifCount] = useState(0)
+
+  // Request Notification Permission on load
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
 
   useEffect(() => {
     const fetchNotifs = async () => {
@@ -27,6 +35,18 @@ export default function Header({ title, onLogout }) {
           
           setNotifications(notifs);
           
+          // Trigger Push Notification if there are new errors
+          if (notifs.length > lastNotifCount) {
+            const newNotif = notifs[0]; // Ambil yang paling baru
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification('MobileCell: Aktivitas Gagal/Salah', {
+                body: `${newNotif.text}\nCatatan: ${newNotif.komentar || '-'}`,
+                icon: '/vite.svg'
+              });
+            }
+          }
+          setLastNotifCount(notifs.length);
+
           if ('setAppBadge' in navigator) {
             navigator.setAppBadge(notifs.length).catch(console.error);
           }

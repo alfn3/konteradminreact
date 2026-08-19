@@ -249,7 +249,7 @@ const DataStok = ({ addToast }) => {
                 <th className="px-4 py-3 text-center">Gudang</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="bg-white">
               {stokData[activeTab].filter(item => {
                 if (!hideEmpty) return true;
                 const mod = modifiedStok[item.realRow];
@@ -364,7 +364,7 @@ const DataStok = ({ addToast }) => {
                 };
                 
                 return (
-                  <tr key={idx} className={`hover:bg-slate-50/50 ${isProviderChanged ? 'border-t-2 border-slate-300' : ''}`}>
+                  <tr key={idx} className={`hover:bg-slate-50/50 ${isProviderChanged ? 'border-t-2 border-dashed border-slate-300' : ''}`}>
                     <td className="px-4 py-3 text-slate-500">{idx + 1}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2.5 py-1 rounded-full text-xs whitespace-nowrap ${badgeClass}`}>

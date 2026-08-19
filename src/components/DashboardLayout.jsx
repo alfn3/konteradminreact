@@ -25,7 +25,7 @@ export default function DashboardLayout({ screen, setScreen, onLogout }) {
   const [toasts, setToasts] = useState([])
 
   const addToast = (text, type = 'success') => {
-    const id = Date.now()
+    const id = Date.now() + Math.random();
     setToasts((prev) => [...prev, { id, text, type }])
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500)
   }

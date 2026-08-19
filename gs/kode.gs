@@ -107,20 +107,27 @@ function getDashboardStats() {
           const targetSheet = knt.sheet;
           
           const sh = ssStok.getSheetByName(targetSheet);
-          const jaga = sh ? (sh.getRange("Q35").getDisplayValue() || "-") : "-";
-          const selisih = sh ? (sh.getRange("N44").getValue() || 0) : 0;
-          
-          // Ambil Omset dari cell N38 (dan margin O38 jika ada)
-          const omset = sh ? (Number(sh.getRange("N38").getValue()) || 0) : 0;
-          const margin = sh ? (Number(sh.getRange("O38").getValue()) || 0) : 0;
+          let jaga = "-";
+          let selisih = 0;
+          let omset = 0;
+          let margin = 0;
+
+          if (sh) {
+             try { jaga = sh.getRange("Q35").getDisplayValue() || "-"; } catch(e) {}
+             try { selisih = Number(String(sh.getRange("N44").getDisplayValue()).replace(/[^0-9-]/g, '')) || 0; } catch(e) {}
+             try { omset = Number(String(sh.getRange("N38").getDisplayValue()).replace(/[^0-9-]/g, '')) || 0; } catch(e) {}
+             try { margin = Number(String(sh.getRange("O38").getDisplayValue()).replace(/[^0-9-]/g, '')) || 0; } catch(e) {}
+          }
           
           // Data Prev per toko
           let omsetPrev = 0;
           let marginPrev = 0;
           if (ssPrev) {
             const shPrev = ssPrev.getSheetByName(targetSheet);
-            omsetPrev = shPrev ? (Number(shPrev.getRange("N38").getValue()) || 0) : 0;
-            marginPrev = shPrev ? (Number(shPrev.getRange("O38").getValue()) || 0) : 0;
+            if (shPrev) {
+               try { omsetPrev = Number(String(shPrev.getRange("N38").getDisplayValue()).replace(/[^0-9-]/g, '')) || 0; } catch(e) {}
+               try { marginPrev = Number(String(shPrev.getRange("O38").getDisplayValue()).replace(/[^0-9-]/g, '')) || 0; } catch(e) {}
+            }
           }
 
           totalOmsetNow += omset;
@@ -1808,9 +1815,9 @@ function doPost(e) {
 function getReportDataBulanan(bulanFilter) {
   try {
     const ss = SpreadsheetApp.openById(FILES.ADMIN);
-    const sheet = ss.getSheetByName("data bulanan");
+    const sheet = ss.getSheetByName("data_bulanan");
     if (!sheet) {
-      return { success: false, error: "Sheet 'data bulanan' tidak ditemukan di Spreadsheet Admin." };
+      return { success: false, error: "Sheet 'data_bulanan' tidak ditemukan di Spreadsheet Admin." };
     }
     
     const data = sheet.getDataRange().getDisplayValues();
