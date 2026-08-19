@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { gasService } from '../services/gas'
 
 export default function Header({ title, onLogout }) {
@@ -6,7 +6,7 @@ export default function Header({ title, onLogout }) {
   const [showProfile, setShowProfile] = useState(false)
   const [query, setQuery] = useState('')
   const [notifications, setNotifications] = useState([])
-  const [lastNotifCount, setLastNotifCount] = useState(0)
+  const lastNotifCount = useRef(0)
 
   // Request Notification Permission on load
   useEffect(() => {
@@ -36,7 +36,7 @@ export default function Header({ title, onLogout }) {
           setNotifications(notifs);
           
           // Trigger Push Notification if there are new errors
-          if (notifs.length > lastNotifCount) {
+          if (notifs.length > lastNotifCount.current) {
             const newNotif = notifs[0]; // Ambil yang paling baru
             if ('Notification' in window && Notification.permission === 'granted') {
               new Notification('MobileCell: Aktivitas Gagal/Salah', {
@@ -45,7 +45,7 @@ export default function Header({ title, onLogout }) {
               });
             }
           }
-          setLastNotifCount(notifs.length);
+          lastNotifCount.current = notifs.length;
 
           if ('setAppBadge' in navigator) {
             navigator.setAppBadge(notifs.length).catch(console.error);
