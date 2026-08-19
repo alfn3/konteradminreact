@@ -1962,15 +1962,13 @@ function simpanUangFisik(params) {
     const colIdx = konterMap[params.konter];
     if (!colIdx) return { success: false, error: "Konter tidak valid." };
     
-    // Tulis ke baris yang sesuai (9 baris)
+    // Tulis ke baris 17-25 (9 baris)
     const updates = [];
     for(let i=0; i<9; i++) {
        const val = params.values[i] || 0;
        updates.push([val]);
     }
-      
-    const startRow = params.konter === "TOTAL_SEMUA" ? 6 : 17;
-    sheet.getRange(startRow, colIdx, 9, 1).setValues(updates);
+    sheet.getRange(17, colIdx, 9, 1).setValues(updates);
     
     return { success: true, message: "Pengecekan fisik berhasil disimpan" };
   } catch(e) {
@@ -2044,12 +2042,12 @@ function tambahManajemenKas(payload) {
     const valMasuk = isPemasukan ? payload.nominal : '';
     const valKeluar = !isPemasukan ? payload.nominal : '';
     
-    // Format tanggal (YYYY-MM-DD) menjadi DD/MM/YY agar Sheet otomatis mengubahnya sesuai format kolom
+    // Parse tanggal (YYYY-MM-DD) menjadi Date object agar tersimpan sebagai Date (bukan teks) di Google Sheets
     if (payload.tanggal) {
        const parts = payload.tanggal.split('-');
        if (parts.length === 3) {
-          const dateStr = `${parts[2]}/${parts[1]}/${parts[0].slice(-2)}`; // 19/08/26
-          sheet.getRange(targetRow, 1).setValue(dateStr);
+          const dateObj = new Date(parts[0], parseInt(parts[1], 10) - 1, parts[2], 12, 0, 0);
+          sheet.getRange(targetRow, 1).setValue(dateObj).setNumberFormat('dd mmmm yyyy');
        } else {
           sheet.getRange(targetRow, 1).setValue(payload.tanggal);
        }

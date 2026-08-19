@@ -7,6 +7,7 @@ import ManajemenSDM from '../pages/ManajemenSDM'
 import DataKonter from '../pages/DataKonter'
 import LogAktivitas from '../pages/LogAktivitas'
 import LaporanBulanan from '../pages/LaporanBulanan'
+import KeuanganKas from '../pages/KeuanganKas'
 import Toast from './Toast'
 
 const titles = {
@@ -16,6 +17,7 @@ const titles = {
   konter: 'Data Konter',
   log: 'Log Aktivitas',
   laporan: 'Laporan Bulanan',
+  keuangan: 'Keuangan & Kas',
 }
 
 export default function DashboardLayout({ screen, setScreen, onLogout }) {
@@ -43,6 +45,7 @@ export default function DashboardLayout({ screen, setScreen, onLogout }) {
           {screen === 'konter' && <DataKonter {...screenProps} />}
           {screen === 'log' && <LogAktivitas {...screenProps} />}
           {screen === 'laporan' && <LaporanBulanan {...screenProps} />}
+          {screen === 'keuangan' && <KeuanganKas {...screenProps} />}
         </main>
       </div>
 

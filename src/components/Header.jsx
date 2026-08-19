@@ -1,15 +1,45 @@
-import { useState } from 'react'
-
-const notifications = [
-  { id: 1, text: 'Rina belum absen hari ini', time: '08:15', type: 'warning' },
-  { id: 2, text: 'Stok Kartu Perdana M1 hampir habis', time: '07:30', type: 'info' },
-  { id: 3, text: 'Laporan Juli telah selesai diinput', time: 'Kemarin', type: 'success' },
-]
+import { useState, useEffect } from 'react'
+import { gasService } from '../services/gas'
 
 export default function Header({ title, onLogout }) {
   const [showNotif, setShowNotif] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
   const [query, setQuery] = useState('')
+  const [notifications, setNotifications] = useState([])
+
+  useEffect(() => {
+    const fetchNotifs = async () => {
+      try {
+        const res = await gasService.call('getLogNotifikasi');
+        if (res && res.data) {
+          const errors = res.data.filter(row => {
+            const status = String(row[6] || '').toLowerCase();
+            return status.includes('gagal') || status.includes('salah') || status.includes('error') || status.includes('belum');
+          });
+          
+          const notifs = errors.map((row, i) => ({
+            id: i,
+            text: `[${row[2] || 'Sistem'}] ${row[4] || row[3] || 'Aktivitas'} - ${row[6] || 'Gagal'}`,
+            time: (row[0] || '').split(' ')[1] || row[0],
+            type: 'warning'
+          }));
+          
+          setNotifications(notifs);
+          
+          if ('setAppBadge' in navigator) {
+            navigator.setAppBadge(notifs.length).catch(console.error);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch notifs', e);
+      }
+    };
+    
+    fetchNotifs();
+    // Opsional: Polling setiap 5 menit
+    // const interval = setInterval(fetchNotifs, 5 * 60 * 1000);
+    // return () => clearInterval(interval);
+  }, []);
 
   const today = new Date().toLocaleDateString('id-ID', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
@@ -51,10 +81,14 @@ export default function Header({ title, onLogout }) {
           <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
           </svg>
-          <span
-            className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
-            style={{ background: '#EF4444', border: '2px solid #fff' }}
-          />
+          {notifications.length > 0 && (
+            <span
+              className="absolute -top-1 -right-1 flex items-center justify-center text-white font-bold rounded-full"
+              style={{ background: '#EF4444', border: '2px solid #fff', width: '18px', height: '18px', fontSize: '9px' }}
+            >
+              {notifications.length > 99 ? '99+' : notifications.length}
+            </span>
+          )}
         </button>
 
         {showNotif && (
@@ -65,31 +99,37 @@ export default function Header({ title, onLogout }) {
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
               <span className="text-sm font-semibold text-slate-800">Notifikasi</span>
               <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: '#EFF6FF', color: '#0D6EFD' }}>
-                {notifications.length} baru
+                {notifications.length} peringatan
               </span>
             </div>
-            <div className="divide-y divide-slate-50">
-              {notifications.map((n) => (
-                <div key={n.id} className="flex gap-3 px-4 py-3 hover:bg-slate-50 cursor-pointer">
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                    style={{
-                      background: n.type === 'warning' ? '#FEF9C3' : n.type === 'success' ? '#DCFCE7' : '#DBEAFE',
-                      color: n.type === 'warning' ? '#CA8A04' : n.type === 'success' ? '#16A34A' : '#2563EB',
-                    }}
-                  >
-                    {n.type === 'warning' ? '⚠️' : n.type === 'success' ? '✓' : 'ℹ'}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-slate-700 leading-snug">{n.text}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">{n.time}</p>
-                  </div>
+            <div className="divide-y divide-slate-50 max-h-80 overflow-y-auto">
+              {notifications.length === 0 ? (
+                <div className="p-6 text-center text-slate-500 text-xs">
+                  Hore! Tidak ada masalah hari ini.
                 </div>
-              ))}
+              ) : (
+                notifications.map((n) => (
+                  <div key={n.id} className="flex gap-3 px-4 py-3 hover:bg-slate-50 cursor-pointer">
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                      style={{
+                        background: '#FEF9C3',
+                        color: '#CA8A04'
+                      }}
+                    >
+                      ⚠️
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-slate-700 leading-snug">{n.text}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{n.time}</p>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
             <div className="px-4 py-2 border-t border-slate-100">
               <button className="text-xs font-medium w-full text-center cursor-pointer" style={{ color: '#0D6EFD' }}>
-                Lihat semua notifikasi
+                Lihat semua log aktivitas
               </button>
             </div>
           </div>
