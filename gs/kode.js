@@ -736,8 +736,8 @@ function arrayToCsv(data) {
 // =========================================
 function checkLogin(form) {
   // Ganti Password Admin di sini
-  const ADMIN_USER = "admin";
-  const ADMIN_PASS = "12345"; 
+  const ADMIN_USER = "admin@mobilecell.com";
+  const ADMIN_PASS = "admin1234"; 
 
   if (form.username === ADMIN_USER && form.password === ADMIN_PASS) {
     return { success: true };

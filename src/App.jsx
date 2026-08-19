@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import DashboardLayout from './components/DashboardLayout'
-import { Eye, EyeOff, Lock, User, MapPin } from 'lucide-react'
+import { Eye, EyeOff, Lock, User, Smartphone } from 'lucide-react'
+import { gasService } from './services/gas'
 
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(false)
@@ -10,9 +11,25 @@ export default function App() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
-  const handleLogin = (e) => {
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
+
+  const handleLogin = async (e) => {
     e.preventDefault()
-    setLoggedIn(true)
+    setIsLoggingIn(true)
+    setErrorMsg('')
+    try {
+      const res = await gasService.call('checkLogin', { username, password })
+      if (res && res.success) {
+        setLoggedIn(true)
+      } else {
+        setErrorMsg(res.message || 'Username atau Password salah!')
+      }
+    } catch (err) {
+      setErrorMsg('Error saat terhubung ke server: ' + err.message)
+    } finally {
+      setIsLoggingIn(false)
+    }
   }
 
   if (!loggedIn) {
@@ -23,7 +40,7 @@ export default function App() {
           <div>
             <div className="flex items-center gap-3 mb-2">
               <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center">
-                <MapPin className="w-5 h-5 text-blue-600 fill-blue-600" />
+                <Smartphone className="w-5 h-5 text-blue-600 fill-blue-600" />
               </div>
               <span className="text-2xl font-bold tracking-wide">Mobilecell</span>
             </div>
@@ -74,6 +91,11 @@ export default function App() {
             </div>
 
             <form onSubmit={handleLogin} className="space-y-6">
+              {errorMsg && (
+                <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
+                  {errorMsg}
+                </div>
+              )}
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-slate-700">Username</label>
                 <div className="relative">
@@ -134,9 +156,10 @@ export default function App() {
 
               <button
                 type="submit"
-                className="w-full bg-primary hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all shadow-sm active:scale-[0.98] mt-4"
+                disabled={isLoggingIn}
+                className="w-full bg-primary hover:bg-blue-700 disabled:opacity-70 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-all shadow-sm active:scale-[0.98] mt-4 flex justify-center items-center gap-2"
               >
-                Masuk ke Dashboard
+                {isLoggingIn ? 'Memeriksa...' : 'Masuk ke Dashboard'}
               </button>
             </form>
 
