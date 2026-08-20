@@ -128,7 +128,7 @@ export default function KeuanganKas({ addToast }) {
        const baru = { ...prev };
        if (!baru[key]) {
           if (konter === "TOTAL_SEMUA") {
-             baru[key] = [...(dataRincian[shift]?.TOTAL_SEMUA?.fisikAV?.slice(0, 9) || Array(9).fill(0))];
+             baru[key] = [...(dataRincian[shift]?.TOTAL_SEMUA?.setoranAU?.slice(0,9) || Array(9).fill(0))];
           } else {
              baru[key] = [...(dataRincian[shift]?.[konter]?.fisik || Array(9).fill(0))];
           }
@@ -506,7 +506,7 @@ export default function KeuanganKas({ addToast }) {
                     Rincian Shift Pagi + Sore
                   </h4>
                   <div className="space-y-2">
-                    {(fisikInputs["Sore-TOTAL_SEMUA"] || dataRincian.Sore?.TOTAL_SEMUA?.fisikAV?.slice(0, 9) || Array(9).fill(0)).map((val, idx) => (
+                    {(fisikInputs["Sore-TOTAL_SEMUA"] || dataRincian.Sore?.TOTAL_SEMUA?.setoranAU?.slice(0,9) || Array(9).fill(0)).map((val, idx) => (
                       <div key={idx} className="flex justify-between items-center text-sm py-1 border-b border-indigo-800/40 last:border-0 text-indigo-100/90">
                         <span>Item {idx + 1}</span>
                         <div className="relative w-1/2">
@@ -526,12 +526,12 @@ export default function KeuanganKas({ addToast }) {
                     <div className="flex justify-between items-start text-sm font-bold pt-3 mt-3 border-t-2 border-indigo-500/50 text-white">
                       <span className="mt-1">TOTAL PAGI + SORE</span>
                       <div className="flex flex-col items-end">
-                        <span className={(fisikInputs["Sore-TOTAL_SEMUA"] || dataRincian.Sore?.TOTAL_SEMUA?.fisikAV?.slice(0, 9) || []).reduce((a,b)=>a+b,0) === (((dataRincian.Pagi?.TOTAL_SEMUA?.totalSetoranAU) || 0) + ((dataRincian.Sore?.TOTAL_SEMUA?.totalSetoranAU) || 0)) ? "text-emerald-400 text-base" : "text-rose-400 text-base"}>
-                          {formatRupiah((fisikInputs["Sore-TOTAL_SEMUA"] || dataRincian.Sore?.TOTAL_SEMUA?.fisikAV?.slice(0, 9) || []).reduce((a,b)=>a+b,0))}
+                        <span className={(fisikInputs["Sore-TOTAL_SEMUA"] || dataRincian.Sore?.TOTAL_SEMUA?.setoranAU?.slice(0,9) || []).reduce((a,b)=>a+b,0) === (['Pagi', 'Sore'].reduce((sum, shift) => sum + Object.keys(dataRincian[shift] || {}).filter(k => k !== 'TOTAL_SEMUA').reduce((s, k) => s + (dataRincian[shift][k].totalSetoran || 0), 0), 0)) ? "text-emerald-400 text-base" : "text-rose-400 text-base"}>
+                          {formatRupiah((fisikInputs["Sore-TOTAL_SEMUA"] || dataRincian.Sore?.TOTAL_SEMUA?.setoranAU?.slice(0,9) || []).reduce((a,b)=>a+b,0))}
                         </span>
                         {(() => {
-                           const tfisik = (fisikInputs["Sore-TOTAL_SEMUA"] || dataRincian.Sore?.TOTAL_SEMUA?.fisikAV?.slice(0, 9) || []).reduce((a,b)=>a+b,0);
-                           const tsis = (((dataRincian.Pagi?.TOTAL_SEMUA?.totalSetoranAU) || 0) + ((dataRincian.Sore?.TOTAL_SEMUA?.totalSetoranAU) || 0));
+                           const tfisik = (fisikInputs["Sore-TOTAL_SEMUA"] || dataRincian.Sore?.TOTAL_SEMUA?.setoranAU?.slice(0,9) || []).reduce((a,b)=>a+b,0);
+                           const tsis = ['Pagi', 'Sore'].reduce((sum, shift) => sum + Object.keys(dataRincian[shift] || {}).filter(k => k !== 'TOTAL_SEMUA').reduce((s, k) => s + (dataRincian[shift][k].totalSetoran || 0), 0), 0);
                            if (tsis > 0 && tfisik !== tsis) {
                              const isSurplus = tfisik > tsis;
                              return (
@@ -555,7 +555,7 @@ export default function KeuanganKas({ addToast }) {
                     <button
                       onClick={async () => {
                          await handleSaveFisik("Sore", "TOTAL_SEMUA");
-                         const totalAll = (fisikInputs["Sore-TOTAL_SEMUA"] || dataRincian.Sore?.TOTAL_SEMUA?.fisikAV?.slice(0, 9) || []).reduce((a,b)=>a+b,0);
+                         const totalAll = (fisikInputs["Sore-TOTAL_SEMUA"] || dataRincian.Sore?.TOTAL_SEMUA?.setoranAU?.slice(0,9) || []).reduce((a,b)=>a+b,0);
                          setConfirmKasPrompt({ shift: "Pagi + Sore", total: totalAll });
                       }}
                       disabled={savingFisik === "Sore-TOTAL_SEMUA"}

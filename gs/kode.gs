@@ -1927,12 +1927,9 @@ function getDataSetoran(tanggalRequest) {
       
       // Mengambil Total Semua Konter (Kolom AU baris 6-15)
       const auSetoran = getColumnData(46, 6, 15); // AU index 46
-      const avFisik = getColumnData(47, 6, 15); // AV index 47
       allData[shiftName]["TOTAL_SEMUA"] = {
          setoranAU: auSetoran,
-         totalSetoranAU: auSetoran.reduce((a,b)=>a+b, 0),
-         fisikAV: avFisik,
-         totalFisikAV: avFisik.reduce((a,b)=>a+b, 0)
+         totalSetoranAU: auSetoran.reduce((a,b)=>a+b, 0)
       };
     };
     
