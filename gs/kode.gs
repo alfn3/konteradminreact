@@ -1010,10 +1010,10 @@ function batchUpdateStok(params) {
     // Hanya update kolom E (topup) dan F (stokAkhir)
     if (params.updates && Array.isArray(params.updates)) {
       params.updates.forEach(item => {
-        if (item.topup !== undefined && item.topup !== '') {
+        if (item.topup !== undefined) {
           sheet.getRange(item.row, 5).setValue(item.topup);    // Kolom E = Topup
         }
-        if (item.stokAkhir !== undefined && item.stokAkhir !== '') {
+        if (item.stokAkhir !== undefined) {
           sheet.getRange(item.row, 6).setValue(item.stokAkhir); // Kolom F = Stok Akhir
         }
       });
@@ -1110,7 +1110,7 @@ function batchUpdateStok(params) {
             const nextDaySheet = nextDaySs.getSheetByName(targetSheetName);
             if (nextDaySheet) {
               params.updates.forEach(function(item) {
-                if (item.stokAkhir !== undefined && item.stokAkhir !== '') {
+                if (item.stokAkhir !== undefined) {
                   nextDaySheet.getRange(item.row, 4).setValue(item.stokAkhir); // Kolom D = Stok Awal T+1
                 }
               });

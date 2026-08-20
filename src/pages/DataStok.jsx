@@ -388,7 +388,9 @@ const DataStok = ({ addToast }) => {
                   );
                 };
 
-                const gudangRaw = item.stokGudang === "" ? "" : (Number(item.stokGudang) - topup);
+                const initialTopup = Number(item.topup) || 0;
+                const topupDiff = topup - initialTopup;
+                const gudangRaw = item.stokGudang === "" ? "" : (Number(item.stokGudang) - topupDiff);
                 let gudangTextClass = 'text-slate-800 font-bold';
                 let gudangText = gudangRaw;
                 if (gudangRaw === "" || gudangRaw === 0) {
