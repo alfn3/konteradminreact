@@ -402,10 +402,11 @@ const DataStok = ({ addToast }) => {
                     </td>
                     <td className="px-4 py-3 text-right">Rp {hargaNum.toLocaleString('id-ID')}</td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${terjual > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
-                        }`}>
-                        {terjual}
-                      </span>
+                      {terjual !== 0 && (
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${terjual > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                          {terjual}
+                        </span>
+                      )}
                     </td>
                     <td className={`px-4 py-3 text-center bg-slate-200/70 border-l border-slate-300 shadow-inner ${gudangTextClass}`}>
                       {gudangText}
@@ -594,7 +595,9 @@ const DataStok = ({ addToast }) => {
                     <td className="px-2 py-3 text-center">{renderEditableElektrik(item, 'saldoAwal', awal)}</td>
                     <td className="px-2 py-3 text-center">{renderEditableElektrik(item, 'topup', topup)}</td>
                     <td className="px-2 py-3 text-center font-semibold text-slate-700">{renderEditableElektrik(item, 'saldoAkhir', akhir)}</td>
-                    <td className="px-4 py-3 text-center font-bold text-primary">{terjual.toLocaleString('id-ID')}</td>
+                    <td className={`px-4 py-3 text-center font-bold ${terjual < 0 ? 'text-rose-600' : 'text-primary'}`}>
+                      {terjual !== 0 ? terjual.toLocaleString('id-ID') : ''}
+                    </td>
                   </tr>
                 );
               })}
