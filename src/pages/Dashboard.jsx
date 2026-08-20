@@ -10,13 +10,15 @@ function fmt(n) {
 
 export default function Dashboard({ addToast }) {
   const [data, setData] = useState(null);
+  const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingLogs, setLoadingLogs] = useState(true);
 
   const fetchDashboard = async () => {
     setLoading(true);
     try {
       const res = await gasService.call('getDashboardStats');
-      if (res.success) {
+      if (res && res.success) {
         setData(res);
       }
     } catch (err) {
@@ -26,8 +28,26 @@ export default function Dashboard({ addToast }) {
     }
   };
 
+  const fetchLogs = async () => {
+    setLoadingLogs(true);
+    try {
+      const logRes = await gasService.call('getLogDashboard');
+      if (logRes && logRes.success && Array.isArray(logRes.data)) {
+        setLogs(logRes.data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingLogs(false);
+    }
+  };
+
   useEffect(() => {
-    fetchDashboard();
+    // Jalankan secara berurutan agar Google Apps Script tidak memblokir (ERR_FAILED / CORS)
+    // karena terlalu banyak request serentak ke endpoint yang sama.
+    fetchDashboard().then(() => {
+      fetchLogs();
+    });
   }, []);
 
   if (loading) {
@@ -241,31 +261,54 @@ export default function Dashboard({ addToast }) {
           </div>
         </div>
 
-        {/* Info Pusat */}
-        <div className="bg-white rounded-xl p-5" style={{ border: '1px solid #E2E8F0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+        {/* Aktivitas Log Terbaru */}
+        <div className="bg-white rounded-xl p-5 flex flex-col" style={{ border: '1px solid #E2E8F0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-slate-800">Info Pusat</h2>
+            <h2 className="text-sm font-semibold text-slate-800">Aktivitas Log Terbaru</h2>
             <button
-              onClick={() => addToast && addToast('Pengumuman baru telah dilihat', 'info')}
-              className="text-xs font-medium cursor-pointer"
+              onClick={() => fetchLogs()}
+              className="text-xs font-medium cursor-pointer flex items-center gap-1"
               style={{ color: '#0D6EFD' }}
             >
-              Tandai dibaca
+              {loadingLogs ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Refresh'}
             </button>
           </div>
-          <div className="space-y-3">
-            {/* Tidak ada announcements dari API, tampilkan pesan kosong */}
-            <div className="text-center text-slate-500 text-sm py-4">
-              Tidak ada informasi terbaru.
-            </div>
+          <div className="space-y-3 flex-1 overflow-y-auto">
+            {loadingLogs ? (
+              <div className="animate-pulse space-y-3">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="flex gap-3">
+                    <div className="w-2 h-2 rounded-full bg-slate-200 mt-1.5"></div>
+                    <div className="flex-1">
+                      <div className="h-3 bg-slate-200 rounded w-3/4 mb-2"></div>
+                      <div className="h-2 bg-slate-200 rounded w-1/2"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : logs.length === 0 ? (
+              <div className="text-center text-slate-500 text-sm py-4">
+                Tidak ada log aktivitas hari ini.
+              </div>
+            ) : (
+              logs.map((log, idx) => {
+                const ts = log[0] ? log[0].split(' ')[1] : '';
+                const konter = log[2] || '';
+                const aksi = log[3] || '';
+                const komen = log[5] || '';
+                const isSuccess = log[6] === 'Sukses';
+                return (
+                  <div key={idx} className="flex gap-3 text-sm border-b border-slate-50 pb-3 mb-3 last:border-0 last:pb-0 last:mb-0">
+                    <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${isSuccess ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
+                    <div>
+                      <p className="text-slate-700 font-medium capitalize">{konter} <span className="font-normal text-slate-500 normal-case">{aksi}</span></p>
+                      <p className="text-xs text-slate-400 mt-0.5">{ts} • {komen}</p>
+                    </div>
+                  </div>
+                )
+              })
+            )}
           </div>
-          <button
-            className="w-full mt-3 py-2 rounded-lg text-xs font-medium text-center cursor-pointer"
-            style={{ background: '#F8FAFC', color: '#64748B', border: '1px solid #E2E8F0' }}
-            onClick={() => addToast && addToast('Memuat semua pengumuman...', 'info')}
-          >
-            Lihat Semua Pengumuman
-          </button>
         </div>
       </div>
 

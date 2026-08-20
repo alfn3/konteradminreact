@@ -1834,6 +1834,7 @@ function doPost(e) {
     else if (action === 'hapusManajemenKas') result = hapusManajemenKas(args[0]);
     else if (action === 'testKas') result = testKas();
     else if (action === 'getLogNotifikasi') result = { success: true, data: getLogNotifikasi() };
+    else if (action === 'getLogDashboard') result = { success: true, data: getLogDashboard() };
     
     // Tambahkan action lain sesuai kebutuhan
     else {
@@ -2160,5 +2161,27 @@ function testKas() {
     return { success: true, formulas: data, values: vals, sheetName: sheet.getName() };
   } catch(e) {
     return { success: false, error: e.toString() };
+  }
+}
+
+// =========================================
+// --- API LOG UNTUK DASHBOARD (5 TERBARU TANPA FILTER HARI INI) ---
+// =========================================
+function getLogDashboard() {
+  try {
+    const ss = SpreadsheetApp.openById(FILES.ADMIN);
+    const sheet = ss.getSheetByName("log");
+    if (!sheet) return [];
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return [];
+
+    let numRows = Math.min(lastRow - 1, 5);
+    let startRow = lastRow - numRows + 1;
+
+    const data = sheet.getRange(startRow, 1, numRows, 8).getDisplayValues();
+    return data.reverse();
+  } catch (e) {
+    return [];
   }
 }
