@@ -293,16 +293,30 @@ export default function Dashboard({ addToast }) {
             ) : (
               logs.map((log, idx) => {
                 const ts = log[0] ? log[0].split(' ')[1] : '';
+                const karyawan = log[1] || 'Unknown';
                 const konter = log[2] || '';
                 const aksi = log[3] || '';
+                const produk = log[4] || '';
                 const komen = log[5] || '';
+                const status = log[6] || '';
                 const isSuccess = log[6] === 'Sukses';
                 return (
                   <div key={idx} className="flex gap-3 text-sm border-b border-slate-50 pb-3 mb-3 last:border-0 last:pb-0 last:mb-0">
                     <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${isSuccess ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
                     <div>
-                      <p className="text-slate-700 font-medium capitalize">{konter} <span className="font-normal text-slate-500 normal-case">{aksi}</span></p>
-                      <p className="text-xs text-slate-400 mt-0.5">{ts} • {komen}</p>
+                      <p className="text-slate-700 font-medium capitalize">
+                        {konter} <span className="text-xs font-normal text-slate-400 normal-case ml-1">({karyawan})</span>
+                      </p>
+                      <p className="text-xs font-medium text-slate-600 mt-0.5">
+                        <span className="text-slate-500">{aksi}</span>
+                        {produk && ` • ${produk}`}
+                      </p>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        <span className={`font-medium ${isSuccess ? 'text-emerald-500' : 'text-rose-500'}`}>
+                          {status || 'Unknown'}
+                        </span>{' '}
+                        • {ts} • {komen}
+                      </p>
                     </div>
                   </div>
                 )
