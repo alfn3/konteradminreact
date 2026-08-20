@@ -51,7 +51,7 @@ export default function LaporanBulanan({ addToast }) {
     setProgress({ show: true, current: 0, total: 100, text: 'Mengambil rekap data bulanan...' });
     
     const aggregated = {
-      chartData: { labels: [], omset: [], margin: [], storeMargin: [0, 0, 0, 0, 0] },
+      chartData: { labels: [], omset: [], omsetPrev: [], margin: [], storeMargin: [0, 0, 0, 0, 0], omsetTrend: [] },
       rows: [],
       insentifMap: {}, // Will be populated manually
       selisihMap: {}, // Total selisih per orang
@@ -71,9 +71,14 @@ export default function LaporanBulanan({ addToast }) {
       
       if (res && res.success && Array.isArray(res.data) && res.data.length > 4) {
         const rawRows = res.data.slice(4); // Data mulai di baris 5 (index 4)
+        const rawRowsBefore = res.dataBefore ? res.dataBefore.slice(4) : [];
         
+        const todayDay = new Date().getDate();
+
         rawRows.forEach((row, i) => {
           if (!row[0] || row[0].trim() === '') return;
+          // Ambil data hanya sampai H-1 (jika hari ini tgl 20, ambil s/d 19)
+          if (i >= todayDay - 1) return;
           
           const dateStr = row[0];
           
@@ -112,6 +117,11 @@ export default function LaporanBulanan({ addToast }) {
           let dailyOmset = 0;
           for(let k=1; k<=15; k++) dailyOmset += parseNum(row[k]);
           
+          let dailyOmsetPrev = 0;
+          if (rawRowsBefore[i]) {
+            for(let k=1; k<=15; k++) dailyOmsetPrev += parseNum(rawRowsBefore[i][k]);
+          }
+
           let dailyMargin = 0;
           for(let k=31; k<=35; k++) {
              const val = parseNum(row[k]);
@@ -123,6 +133,7 @@ export default function LaporanBulanan({ addToast }) {
           
           aggregated.chartData.labels.push(dateStr);
           aggregated.chartData.omset.push(dailyOmset);
+          aggregated.chartData.omsetPrev.push(dailyOmsetPrev);
           aggregated.chartData.margin.push(dailyMargin);
 
           // Agregasi Operasional (Menghitung Minus / Hadir)
@@ -160,6 +171,25 @@ export default function LaporanBulanan({ addToast }) {
              }
           }
         });
+
+        // --- Calculate linear trendline for Omset ---
+        const N = aggregated.chartData.omset.length;
+        let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+        for (let i = 0; i < N; i++) {
+          const x = i;
+          const y = aggregated.chartData.omset[i];
+          sumX += x;
+          sumY += y;
+          sumXY += x * y;
+          sumX2 += x * x;
+        }
+        const m = N > 1 ? (N * sumXY - sumX * sumY) / (N * sumX2 - sumX * sumX) : 0;
+        const b = N > 1 ? (sumY - m * sumX) / N : (N === 1 ? aggregated.chartData.omset[0] : 0);
+        
+        for (let i = 0; i < N; i++) {
+          aggregated.chartData.omsetTrend.push(m * i + b);
+        }
+
       } else {
         addToast && addToast('Gagal memuat atau data kosong', 'error');
       }
@@ -369,19 +399,19 @@ export default function LaporanBulanan({ addToast }) {
                 {/* Grafik Visual */}
                 <div className="p-6 border border-slate-100 rounded-2xl bg-white shadow-sm">
                   <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2">
-                    <PieChartIcon className="w-5 h-5 text-primary" /> Tren Omset & Margin Harian
+                    <PieChartIcon className="w-5 h-5 text-primary" /> Tren Omset Harian (Bulan Ini vs Lalu)
                   </h3>
                   <div className="h-[350px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={reportData.chartData.labels.map((lbl, i) => ({ date: lbl.split(' ')[0], omset: reportData.chartData.omset[i], margin: reportData.chartData.margin[i] }))}>
+                      <LineChart data={reportData.chartData.labels.map((lbl, i) => ({ date: lbl.split(' ')[0], omset: reportData.chartData.omset[i], omsetPrev: reportData.chartData.omsetPrev[i], omsetTrend: reportData.chartData.omsetTrend[i] }))}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                         <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748B' }} dy={10} />
-                        <YAxis yAxisId="left" tickFormatter={(val) => `Rp ${(val/1000000).toFixed(0)}M`} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748B' }} dx={-10} />
-                        <YAxis yAxisId="right" orientation="right" tickFormatter={(val) => `Rp ${(val/1000000).toFixed(1)}M`} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748B' }} dx={10} />
+                        <YAxis tickFormatter={(val) => `Rp ${(val/1000000).toFixed(0)}M`} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748B' }} dx={-10} />
                         <Tooltip formatter={(value) => formatRp(value)} labelStyle={{ color: '#0f172a', fontWeight: 'bold', marginBottom: '8px' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px -2px rgba(0, 0, 0, 0.1)', padding: '12px' }} />
                         <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                        <Line yAxisId="left" type="monotone" dataKey="omset" name="Omset P&VC" stroke="#0D6EFD" strokeWidth={3} dot={{ r: 3, fill: '#0D6EFD', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
-                        <Line yAxisId="right" type="monotone" dataKey="margin" name="Total Margin" stroke="#10B981" strokeWidth={3} dot={{ r: 3, fill: '#10B981', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
+                        <Line type="monotone" dataKey="omset" name="Omset Bulan Ini" stroke="#0D6EFD" strokeWidth={3} dot={{ r: 3, fill: '#0D6EFD', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
+                        <Line type="monotone" dataKey="omsetPrev" name="Omset Bulan Lalu" stroke="#94A3B8" strokeDasharray="5 5" strokeWidth={2} dot={{ r: 3, fill: '#94A3B8', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 5 }} />
+                        <Line type="monotone" dataKey="omsetTrend" name="Tren (Linear)" stroke="#F59E0B" strokeWidth={2} strokeDasharray="3 3" dot={false} activeDot={false} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>

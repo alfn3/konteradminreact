@@ -183,7 +183,7 @@ export default function Dashboard({ addToast }) {
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="text-sm font-semibold text-slate-800">Ringkasan Per Konter</h2>
-              <p className="text-xs text-slate-400">Rincian Laporan {data.tglKemarin}</p>
+              <p className="text-xs text-slate-400">Rincian Laporan {data.tglKemarin} x {data.tglLalu}</p>
             </div>
             <button 
               onClick={fetchDashboard}
@@ -200,29 +200,39 @@ export default function Dashboard({ addToast }) {
               const pct = maxVal > 0 ? ((p.omset || 0) / maxVal) * 100 : 0;
               const color = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'][i % 5];
               return (
-                <div key={p.toko}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full" style={{ background: color }} />
-                      <span className="text-xs font-medium text-slate-700 capitalize">{p.toko}</span>
+                <div key={p.toko} className="bg-white border border-slate-100 rounded-lg p-3 transition-all hover:shadow-sm hover:border-slate-200">
+                  <div className="flex justify-between items-center mb-2.5">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full" style={{ background: color }} />
+                        <span className="text-sm font-bold text-slate-700 capitalize">{p.toko}</span>
+                        {p.jaga && <span className="text-[10px] text-slate-400">({p.jaga})</span>}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mt-1">
+                        <span>Bulan Lalu: <span className="font-semibold text-slate-600">{fmt(p.omsetPrev)}</span></span>
+                        {p.omsetPrev > 0 && (() => {
+                          const diff = (p.omset || 0) - p.omsetPrev;
+                          const pctDiff = (Math.abs(diff) / p.omsetPrev) * 100;
+                          const isUp = diff >= 0;
+                          return (
+                            <span className={`font-bold ${isUp ? 'text-emerald-500' : 'text-rose-500'}`}>
+                              {isUp ? '▲' : '▼'} {pctDiff.toFixed(1)}%
+                            </span>
+                          );
+                        })()}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-slate-500">
-                      <span>{fmt(p.omset)}</span>
-                      <span
-                        className="font-medium px-1.5 py-0.5 rounded"
-                        style={{ background: p.selisih >= 0 ? '#DCFCE7' : '#FEE2E2', color: p.selisih >= 0 ? '#10B981' : '#EF4444' }}
-                      >
+                    
+                    <div className="text-right">
+                      <div className="text-sm font-bold text-slate-800">{fmt(p.omset)}</div>
+                      <div className={`text-[10px] font-medium mt-0.5 ${p.selisih >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                         Selisih: {fmt(p.selisih)}
-                      </span>
+                      </div>
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                      <div
-                        className="h-full rounded-full"
-                        style={{ width: `${pct}%`, background: color }}
-                      />
-                    </div>
+                  
+                  <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
                   </div>
                 </div>
               )

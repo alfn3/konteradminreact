@@ -57,6 +57,22 @@ function getDashboardStats() {
     // Cari ID pakai Format Search
     const idYst = findFileId(ssAdmin, "file30h", strYstSearch);
     const idPrev = findFileId(ssAdmin, "file30h_before", strPrevSearch);
+      
+    // TAMBAHAN: Ambil data dari data_bulanan_before untuk breakdown omset shift
+    let dataBulananBefore = [];
+    const sheetBulananBefore = ssAdmin.getSheetByName("data_bulanan_before");
+    if (sheetBulananBefore) {
+       dataBulananBefore = sheetBulananBefore.getDataRange().getDisplayValues();
+    }
+    
+    // Cari baris yang cocok dengan strPrevSearch
+    let rowBulananBefore = null;
+    for (let i = 0; i < dataBulananBefore.length; i++) {
+       if (dataBulananBefore[i][0] === strPrevSearch) {
+          rowBulananBefore = dataBulananBefore[i];
+          break;
+       }
+    }
 
     // Laporan Kemarin & Total
     const reportKemarin = [];
@@ -129,6 +145,30 @@ function getDashboardStats() {
                try { marginPrev = Number(String(shPrev.getRange("O38").getDisplayValue()).replace(/[^0-9-]/g, '')) || 0; } catch(e) {}
             }
           }
+            
+                      if (rowBulananBefore) {
+               const nm = namaToko.toUpperCase();
+               let cIdx = -1;
+               if (nm.includes("M1")) cIdx = 66; // Index M1 Pagi (kolom BO)
+               else if (nm.includes("M2")) cIdx = 68; // Index M2 Pagi
+               else if (nm.includes("TOKO") || nm.includes("PUSAT")) cIdx = 70; // Index Toko Pagi
+               else if (nm.includes("M4")) cIdx = 72; // Index M4 Pagi
+               else if (nm.includes("JAYA")) cIdx = 74; // Index Jaya Pagi
+               
+               if (cIdx !== -1) {
+                  const oPagi = Number(String(rowBulananBefore[cIdx]).replace(/[^0-9-]/g, '')) || 0;
+                  const oSore = Number(String(rowBulananBefore[cIdx+1]).replace(/[^0-9-]/g, '')) || 0;
+                  
+                  // Ganti nilai omsetPrev berdasarkan shift konter
+                  if (nm.includes("PAGI")) {
+                     omsetPrev = oPagi;
+                  } else if (nm.includes("SORE")) {
+                     omsetPrev = oSore;
+                  } else {
+                     omsetPrev = oPagi + oSore; // Jika bukan shift spesifik, totalkan
+                  }
+               }
+          }
 
           totalOmsetNow += omset;
           totalMarginNow += margin;
@@ -141,7 +181,7 @@ function getDashboardStats() {
             selisih: selisih,
             omset: omset,
             margin: margin,
-            omsetPrev: omsetPrev, // Data Bulan Lalu Per Toko
+            omsetPrev: omsetPrev, // Data Bulan Lalu (Sudah spesifik shift)
             marginPrev: marginPrev
           });
         });
@@ -1813,16 +1853,19 @@ function doPost(e) {
 // =========================================
 // FITUR: BACA DATA BULANAN LANGSUNG DARI SHEET "data bulanan"
 // =========================================
+
 function getReportDataBulanan(bulanFilter) {
   try {
     const ss = SpreadsheetApp.openById(FILES.ADMIN);
     const sheet = ss.getSheetByName("data_bulanan");
+    const sheetBefore = ss.getSheetByName("data_bulanan_before");
     if (!sheet) {
       return { success: false, error: "Sheet 'data_bulanan' tidak ditemukan di Spreadsheet Admin." };
     }
     
     const data = sheet.getDataRange().getDisplayValues();
-    return { success: true, data: data };
+    const dataBefore = sheetBefore ? sheetBefore.getDataRange().getDisplayValues() : [];
+    return { success: true, data: data, dataBefore: dataBefore };
   } catch (e) {
     return { success: false, error: e.toString() };
   }
