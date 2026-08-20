@@ -281,6 +281,14 @@ export default function KeuanganKas({ addToast }) {
        
        const totalSemua = shiftData["TOTAL_SEMUA"] || {};
        
+       const totalFisikShift = Object.keys(shiftData)
+         .filter(k => k !== "TOTAL_SEMUA")
+         .reduce((acc, konterName) => {
+           const key = `${shiftName}-${konterName}`;
+           const currentFisikArray = fisikInputs[key] || shiftData[konterName].fisik || [];
+           return acc + currentFisikArray.reduce((a, b) => a + b, 0);
+         }, 0);
+       
        return (
          <div className="mb-8 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
@@ -289,14 +297,12 @@ export default function KeuanganKas({ addToast }) {
                Shift {shiftName}
              </h3>
              <div className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm font-semibold">
-               Total Sistem: {formatRupiah(totalSemua.totalSetoranAU || 0)}
+               Total Fisik: {formatRupiah(totalFisikShift)}
              </div>
            </div>
            
            <div className="p-4 space-y-3">
              {Object.keys(shiftData).filter(k => k !== "TOTAL_SEMUA").map(konterName => {
-                if (filterKonter !== 'Semua' && konterName !== filterKonter) return null;
-                
                 const kData = shiftData[konterName];
                 const key = `${shiftName}-${konterName}`;
                 const isExpanded = expandedKonter === key;
@@ -337,8 +343,9 @@ export default function KeuanganKas({ addToast }) {
                           </span>
                         )}
                         {kData.totalSetoran > 0 && !isMatch && (
-                          <span className="flex items-center text-rose-600 bg-rose-50 px-2 py-1 rounded-md font-medium">
-                            <X className="w-4 h-4 mr-1" /> Selisih {formatRupiah(Math.abs(kData.totalSetoran - currentTotalFisik))}
+                          <span className={`flex items-center px-2 py-1 rounded-md font-medium ${currentTotalFisik > kData.totalSetoran ? 'text-blue-600 bg-blue-50' : 'text-rose-600 bg-rose-50'}`}>
+                            {currentTotalFisik > kData.totalSetoran ? <Plus className="w-4 h-4 mr-1" /> : <X className="w-4 h-4 mr-1" />}
+                            {currentTotalFisik > kData.totalSetoran ? 'Lebih' : 'Selisih'} {formatRupiah(Math.abs(kData.totalSetoran - currentTotalFisik))}
                           </span>
                         )}
                         {isExpanded ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
@@ -353,12 +360,12 @@ export default function KeuanganKas({ addToast }) {
                         <div className="flex-1">
                            <h5 className="text-sm font-bold text-slate-700 mb-3 flex items-center">
                              <FileText className="w-4 h-4 mr-2 text-blue-500" />
-                             Rincian Sistem (Baris 6-15)
+                             Rincian Sistem
                            </h5>
                            <div className="bg-slate-50 rounded-lg border border-slate-200 p-3 space-y-2">
                              {kData.setoran.map((val, idx) => (
                                <div key={idx} className="flex justify-between text-sm py-1 border-b border-slate-100 last:border-0">
-                                 <span className="text-slate-500">Baris {idx + 6}</span>
+                                 <span className="text-slate-500">Item {idx + 1}</span>
                                  <span className="font-medium text-slate-800">{formatRupiah(val)}</span>
                                </div>
                              ))}
@@ -374,7 +381,7 @@ export default function KeuanganKas({ addToast }) {
                            <div className="flex justify-between items-center mb-3">
                              <h5 className="text-sm font-bold text-slate-700 flex items-center">
                                <Wallet className="w-4 h-4 mr-2 text-emerald-500" />
-                               Pengecekan Fisik (Baris 17-25)
+                               Pengecekan Fisik
                              </h5>
                              <button
                                onClick={() => handleSaveFisik(shiftName, konterName)}
@@ -439,7 +446,7 @@ export default function KeuanganKas({ addToast }) {
              <div>
                <h3 className="text-lg font-bold text-indigo-100 flex items-center group-hover:text-white transition-colors">
                  <TrendingUp className="w-5 h-5 mr-2 text-emerald-400" />
-                 Total Sistem Pagi + Sore (Kolom AU/AW)
+                 Total Sistem Pagi + Sore
                </h3>
                <p className="text-indigo-200 text-sm mt-1">Akumulasi seluruh setoran berdasarkan perhitungan master sheet</p>
              </div>
@@ -453,60 +460,17 @@ export default function KeuanganKas({ addToast }) {
            </div>
 
            {expandTotal && (
-             <div className="mt-4 border-t border-indigo-700/60 pt-6 grid grid-cols-1 md:grid-cols-2 gap-6 w-full animate-in slide-in-from-top-4 duration-200">
-                {/* Pagi */}
+             <div className="mt-4 border-t border-indigo-700/60 pt-6 grid grid-cols-1 gap-6 w-full animate-in slide-in-from-top-4 duration-200 max-w-3xl mx-auto">
+                {/* Pagi + Sore */}
                 <div className="bg-indigo-950/40 rounded-xl p-5 border border-indigo-800/50">
                   <h4 className="font-bold text-indigo-200 mb-4 flex items-center">
                     <Calendar className="w-4 h-4 mr-2 text-indigo-400"/> 
-                    Rincian Shift Pagi
-                  </h4>
-                  <div className="space-y-2">
-                    {(fisikInputs["Pagi-TOTAL_SEMUA"] || dataRincian.Pagi?.TOTAL_SEMUA?.setoranAU || Array(9).fill(0)).map((val, idx) => (
-                      <div key={idx} className="flex justify-between items-center text-sm py-1 border-b border-indigo-800/40 last:border-0 text-indigo-100/90">
-                        <span>Baris {idx + 6}</span>
-                        <div className="relative w-1/2">
-                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-indigo-400 text-xs">Rp</span>
-                          <input 
-                            type="text" 
-                            value={val === 0 ? '' : (val === '-' ? '-' : new Intl.NumberFormat('id-ID').format(val))}
-                            onChange={(e) => handleFisikChange("Pagi", "TOTAL_SEMUA", idx, e.target.value)}
-                            className="w-full pl-7 pr-2 py-1 text-right text-sm font-medium bg-indigo-900/50 border border-indigo-700 rounded focus:border-indigo-400 focus:outline-none text-white"
-                            placeholder="0"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                    <div className="flex justify-between items-center text-sm font-bold pt-3 mt-3 border-t-2 border-indigo-500/50 text-white">
-                      <span>TOTAL PAGI</span>
-                      <span className={(fisikInputs["Pagi-TOTAL_SEMUA"] || dataRincian.Pagi?.TOTAL_SEMUA?.setoranAU || []).reduce((a,b)=>a+b,0) === dataRincian.Pagi?.TOTAL_SEMUA?.totalSetoranAU ? "text-emerald-400 text-base" : "text-rose-400 text-base"}>
-                        {formatRupiah((fisikInputs["Pagi-TOTAL_SEMUA"] || dataRincian.Pagi?.TOTAL_SEMUA?.setoranAU || []).reduce((a,b)=>a+b,0))}
-                      </span>
-                    </div>
-                    <button
-                      onClick={async () => {
-                         await handleSaveFisik("Pagi", "TOTAL_SEMUA");
-                         const totalPagi = (fisikInputs["Pagi-TOTAL_SEMUA"] || dataRincian.Pagi?.TOTAL_SEMUA?.setoranAU || []).reduce((a,b)=>a+b,0);
-                         const totalSore = (fisikInputs["Sore-TOTAL_SEMUA"] || dataRincian.Sore?.TOTAL_SEMUA?.setoranAU || []).reduce((a,b)=>a+b,0);
-                         setConfirmKasPrompt({ shift: "Pagi + Sore", total: totalPagi + totalSore });
-                      }}
-                      disabled={savingFisik === "Pagi-TOTAL_SEMUA"}
-                      className="w-full mt-3 bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
-                    >
-                      {savingFisik === "Pagi-TOTAL_SEMUA" ? "Menyimpan..." : "Simpan Pagi"}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Sore */}
-                <div className="bg-indigo-950/40 rounded-xl p-5 border border-indigo-800/50">
-                  <h4 className="font-bold text-indigo-200 mb-4 flex items-center">
-                    <Calendar className="w-4 h-4 mr-2 text-indigo-400"/> 
-                    Rincian Shift Sore
+                    Rincian Shift Pagi + Sore
                   </h4>
                   <div className="space-y-2">
                     {(fisikInputs["Sore-TOTAL_SEMUA"] || dataRincian.Sore?.TOTAL_SEMUA?.setoranAU || Array(9).fill(0)).map((val, idx) => (
                       <div key={idx} className="flex justify-between items-center text-sm py-1 border-b border-indigo-800/40 last:border-0 text-indigo-100/90">
-                        <span>Baris {idx + 6}</span>
+                        <span>Item {idx + 1}</span>
                         <div className="relative w-1/2">
                           <span className="absolute left-2 top-1/2 -translate-y-1/2 text-indigo-400 text-xs">Rp</span>
                           <input 
@@ -520,22 +484,21 @@ export default function KeuanganKas({ addToast }) {
                       </div>
                     ))}
                     <div className="flex justify-between items-center text-sm font-bold pt-3 mt-3 border-t-2 border-indigo-500/50 text-white">
-                      <span>TOTAL SORE</span>
-                      <span className={(fisikInputs["Sore-TOTAL_SEMUA"] || dataRincian.Sore?.TOTAL_SEMUA?.setoranAU || []).reduce((a,b)=>a+b,0) === dataRincian.Sore?.TOTAL_SEMUA?.totalSetoranAU ? "text-emerald-400 text-base" : "text-rose-400 text-base"}>
+                      <span>TOTAL PAGI + SORE</span>
+                      <span className={(fisikInputs["Sore-TOTAL_SEMUA"] || dataRincian.Sore?.TOTAL_SEMUA?.setoranAU || []).reduce((a,b)=>a+b,0) === (((dataRincian.Pagi?.TOTAL_SEMUA?.totalSetoranAU) || 0) + ((dataRincian.Sore?.TOTAL_SEMUA?.totalSetoranAU) || 0)) ? "text-emerald-400 text-base" : "text-rose-400 text-base"}>
                         {formatRupiah((fisikInputs["Sore-TOTAL_SEMUA"] || dataRincian.Sore?.TOTAL_SEMUA?.setoranAU || []).reduce((a,b)=>a+b,0))}
                       </span>
                     </div>
                     <button
                       onClick={async () => {
                          await handleSaveFisik("Sore", "TOTAL_SEMUA");
-                         const totalPagi = (fisikInputs["Pagi-TOTAL_SEMUA"] || dataRincian.Pagi?.TOTAL_SEMUA?.setoranAU || []).reduce((a,b)=>a+b,0);
-                         const totalSore = (fisikInputs["Sore-TOTAL_SEMUA"] || dataRincian.Sore?.TOTAL_SEMUA?.setoranAU || []).reduce((a,b)=>a+b,0);
-                         setConfirmKasPrompt({ shift: "Pagi + Sore", total: totalPagi + totalSore });
+                         const totalAll = (fisikInputs["Sore-TOTAL_SEMUA"] || dataRincian.Sore?.TOTAL_SEMUA?.setoranAU || []).reduce((a,b)=>a+b,0);
+                         setConfirmKasPrompt({ shift: "Pagi + Sore", total: totalAll });
                       }}
                       disabled={savingFisik === "Sore-TOTAL_SEMUA"}
                       className="w-full mt-3 bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
                     >
-                      {savingFisik === "Sore-TOTAL_SEMUA" ? "Menyimpan..." : "Simpan Sore"}
+                      {savingFisik === "Sore-TOTAL_SEMUA" ? "Menyimpan..." : "Simpan Pagi + Sore"}
                     </button>
                   </div>
                 </div>
@@ -690,7 +653,7 @@ export default function KeuanganKas({ addToast }) {
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
         <div>
           <h1 className="text-2xl font-black text-slate-800 flex items-center">
             <Wallet className="w-7 h-7 mr-3 text-indigo-600" />
@@ -698,49 +661,36 @@ export default function KeuanganKas({ addToast }) {
           </h1>
           <p className="text-slate-500 mt-1 text-sm">Kelola setoran harian dan mutasi kas operasional</p>
         </div>
-        <div className="flex gap-3">
-           <button 
-             onClick={() => setActiveTab('rincian')}
-             className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center shadow-sm ${activeTab === 'rincian' ? 'bg-indigo-600 text-white ring-2 ring-indigo-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-           >
-             <Activity className="w-4 h-4 mr-2" /> Setoran Sistem
-           </button>
-           <button 
-             onClick={() => {
-                setActiveTab('manajemen');
-                // ubah state format ke bulanan jika pindah ke tab kas
-                setFilterTanggal(new Date().toISOString().slice(0, 7)); 
-             }}
-             className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center shadow-sm ${activeTab === 'manajemen' ? 'bg-indigo-600 text-white ring-2 ring-indigo-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-           >
-             <Wallet className="w-4 h-4 mr-2" /> Manajemen Kas
-           </button>
-        </div>
-      </div>
-
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 items-center">
-        <div className="w-full md:w-auto flex-1 relative">
-          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input 
-            type={activeTab === 'manajemen' ? 'month' : 'date'}
-            value={filterTanggal}
-            onChange={(e) => setFilterTanggal(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
-          />
-        </div>
-        {activeTab === 'rincian' && (
-          <div className="w-full md:w-auto flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <select
-              value={filterKonter}
-              onChange={(e) => setFilterKonter(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm appearance-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
-            >
-              <option value="Semua">Semua Konter</option>
-              {konterOptions.map(k => <option key={k} value={k}>{k}</option>)}
-            </select>
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
+          {/* Date Picker */}
+          <div className="relative w-full sm:w-48">
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input 
+              type={activeTab === 'manajemen' ? 'month' : 'date'}
+              value={filterTanggal}
+              onChange={(e) => setFilterTanggal(e.target.value)}
+              className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm transition-all"
+            />
           </div>
-        )}
+          {/* Buttons */}
+          <div className="flex gap-2 w-full sm:w-auto">
+             <button 
+               onClick={() => setActiveTab('rincian')}
+               className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 flex justify-center items-center shadow-sm ${activeTab === 'rincian' ? 'bg-indigo-600 text-white ring-2 ring-indigo-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+             >
+               <Activity className="w-4 h-4 mr-2" /> Setoran Sistem
+             </button>
+             <button 
+               onClick={() => {
+                  setActiveTab('manajemen');
+                  setFilterTanggal(new Date().toISOString().slice(0, 7)); 
+               }}
+               className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 flex justify-center items-center shadow-sm ${activeTab === 'manajemen' ? 'bg-indigo-600 text-white ring-2 ring-indigo-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+             >
+               <Wallet className="w-4 h-4 mr-2" /> Manajemen Kas
+             </button>
+          </div>
+        </div>
       </div>
 
       {activeTab === 'rincian' ? renderTabRincian() : renderTabManajemen()}

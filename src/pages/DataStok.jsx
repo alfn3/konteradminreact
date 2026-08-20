@@ -151,8 +151,8 @@ const DataStok = ({ addToast }) => {
       row: item.row,
       kategori: item.kategori,
       produk: item.produk,
-      topup: item.topup,
-      stokAkhir: item.stokAkhir
+      topup: item.topup === '' ? '' : item.topup,
+      stokAkhir: item.stokAkhir === '' ? '' : item.stokAkhir
     }));
     const updatesPengeluaran = Object.values(modifiedPengeluaran);
     const updatesUang = Object.values(modifiedUang);
@@ -245,8 +245,8 @@ const DataStok = ({ addToast }) => {
                 <th className="px-4 py-3 text-center">Topup</th>
                 <th className="px-4 py-3 text-center">Akhir</th>
                 <th className="px-4 py-3 text-right">Harga</th>
-                <th className="px-4 py-3 text-center">Terjual</th>
-                <th className="px-4 py-3 text-center">Gudang</th>
+                <th className="px-4 py-3 text-center w-24">Terjual</th>
+                <th className="px-4 py-3 text-center w-24 bg-slate-700 text-white border-l border-slate-600 rounded-tr-lg">Gudang</th>
               </tr>
             </thead>
             <tbody className="bg-white">
@@ -342,10 +342,22 @@ const DataStok = ({ addToast }) => {
                           type="number"
                           autoFocus
                           onBlur={() => setEditingCell(null)}
-                          className="w-12 text-center bg-transparent outline-none"
-                          value={modifiedStok[item.realRow]?.[field] ?? (item[field] || '')}
+                          className="w-12 text-center bg-transparent outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          onWheel={(e) => e.target.blur()}
+                          value={modifiedStok[item.realRow]?.[field] ?? (item[field] === 0 ? '' : (item[field] ?? ''))}
                           onChange={(e) => handleStokChange(item, field, e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && setEditingCell(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault();
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              e.target.blur();
+                              const currentIndex = arr.findIndex(x => x.realRow === item.realRow);
+                              if (currentIndex !== -1 && currentIndex < arr.length - 1) {
+                                const nextRow = arr[currentIndex + 1].realRow;
+                                setTimeout(() => setEditingCell({ row: nextRow, field }), 10);
+                              }
+                            }
+                          }}
                         />
                       </div>
                     );
@@ -362,6 +374,15 @@ const DataStok = ({ addToast }) => {
                     </div>
                   );
                 };
+                
+                const gudangRaw = item.stokGudang === "" ? "" : (Number(item.stokGudang) - topup);
+                let gudangTextClass = 'text-slate-800 font-bold';
+                let gudangText = gudangRaw;
+                if (gudangRaw === "" || gudangRaw === 0) {
+                  gudangText = "";
+                } else if (gudangRaw < 0) {
+                  gudangTextClass = 'text-rose-600 font-bold';
+                }
                 
                 return (
                   <tr key={idx} className={`hover:bg-slate-50/50 ${isProviderChanged ? 'border-t-2 border-dashed border-slate-300' : ''}`}>
@@ -387,7 +408,9 @@ const DataStok = ({ addToast }) => {
                         {terjual}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-center text-slate-500 font-semibold">{item.stokGudang === "" ? "" : item.stokGudang}</td>
+                    <td className={`px-4 py-3 text-center bg-slate-200/70 border-l border-slate-300 shadow-inner ${gudangTextClass}`}>
+                      {gudangText}
+                    </td>
                   </tr>
                 );
               })}
@@ -412,10 +435,29 @@ const DataStok = ({ addToast }) => {
                 type={isNumber ? "number" : "text"}
                 autoFocus
                 onBlur={() => setEditingCell(null)}
-                className="w-full bg-transparent outline-none px-2"
+                className={`w-full bg-transparent outline-none px-2 ${isNumber ? '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none' : ''}`}
+                onWheel={(e) => isNumber && e.target.blur()}
                 value={editValue}
                 onChange={(e) => handlePengeluaranChange(item, field, e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && setEditingCell(null)}
+                onKeyDown={(e) => {
+                  if (isNumber && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) e.preventDefault();
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.target.blur();
+                    const arrPeng = stokData.pengeluaran?.filter(i => {
+                      if (!hideEmpty) return true;
+                      if (editingCell?.row === i.row) return true;
+                      const mod = modifiedPengeluaran[i.row];
+                      const nom = Number(mod?.nominal ?? i.nominal) || 0;
+                      const ket = ((mod?.keterangan ?? i.keterangan) || '').toString().trim();
+                      return nom !== 0 || (ket !== '' && ket !== '-');
+                    }) || [];
+                    const currentIndex = arrPeng.findIndex(x => x.row === item.row);
+                    if (currentIndex !== -1 && currentIndex < arrPeng.length - 1) {
+                      setTimeout(() => setEditingCell({ row: arrPeng[currentIndex + 1].row, field }), 10);
+                    }
+                  }
+                }}
               />
             </div>
           );
@@ -489,10 +531,22 @@ const DataStok = ({ addToast }) => {
                 type="number"
                 autoFocus
                 onBlur={() => setEditingCell(null)}
-                className="w-full bg-transparent outline-none px-2 text-center"
+                className="w-full bg-transparent outline-none px-2 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                onWheel={(e) => e.target.blur()}
                 value={editValue}
                 onChange={(e) => handleElektrikChange(item, field, e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && setEditingCell(null)}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault();
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.target.blur();
+                    const arrElektrik = stokData.elektrik || [];
+                    const currentIndex = arrElektrik.findIndex(x => x.realRow === item.realRow);
+                    if (currentIndex !== -1 && currentIndex < arrElektrik.length - 1) {
+                      setTimeout(() => setEditingCell({ row: arrElektrik[currentIndex + 1].realRow, field }), 10);
+                    }
+                  }
+                }}
               />
             </div>
           );
@@ -565,7 +619,17 @@ const DataStok = ({ addToast }) => {
                 className="w-full bg-transparent outline-none px-2"
                 value={modifiedUang[item.row]?.list ?? (item.list || '')}
                 onChange={(e) => handleUangChange(item, e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && setEditingCell(null)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.target.blur();
+                    const arrUang = stokData.uang || [];
+                    const currentIndex = arrUang.findIndex(x => x.row === item.row);
+                    if (currentIndex !== -1 && currentIndex < arrUang.length - 1) {
+                      setTimeout(() => setEditingCell({ row: arrUang[currentIndex + 1].row, field: 'list' }), 10);
+                    }
+                  }
+                }}
               />
             </div>
           );
@@ -677,6 +741,14 @@ const DataStok = ({ addToast }) => {
             Refresh
           </button>
         </div>
+      </div>
+
+      {/* Alert Info */}
+      <div className="bg-blue-50 text-blue-700 p-3 rounded-lg flex items-start gap-2 text-sm font-medium border border-blue-100">
+        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="mt-0.5 flex-shrink-0">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>Jika ingin ubah stok awal tgl ini cukup ubah stok akhir sift sore kemarin.</span>
       </div>
 
       {/* Tabs & Info */}
