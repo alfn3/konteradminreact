@@ -1790,6 +1790,7 @@ function doPost(e) {
     else if (action === 'simpanUangFisik') result = simpanUangFisik(args[0]);
     else if (action === 'getManajemenKas') result = getManajemenKas();
     else if (action === 'tambahManajemenKas') result = tambahManajemenKas(args[0]);
+    else if (action === 'editManajemenKas') result = editManajemenKas(args[0]);
     else if (action === 'hapusManajemenKas') result = hapusManajemenKas(args[0]);
     else if (action === 'testKas') result = testKas();
     else if (action === 'getLogNotifikasi') result = { success: true, data: getLogNotifikasi() };
@@ -2080,6 +2081,28 @@ function hapusManajemenKas(rowReal) {
     sheet.getRange(rowReal, 5).clearContent(); // Keterangan
     
     return { success: true, message: "Berhasil dihapus (dikosongkan)" };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function editManajemenKas(payload) {
+  try {
+    const ss = SpreadsheetApp.openById(KAS_FILE_ID);
+    const sheet = ss.getSheets()[0];
+    const rowReal = payload.rowReal;
+    
+    if (payload.tipe === 'Pemasukan') {
+      sheet.getRange(rowReal, 2).setValue(payload.nominal); // B = Masuk
+      sheet.getRange(rowReal, 3).clearContent(); // C = Keluar (kosongkan)
+    } else {
+      sheet.getRange(rowReal, 2).clearContent(); // B = Masuk (kosongkan)
+      sheet.getRange(rowReal, 3).setValue(payload.nominal); // C = Keluar
+    }
+    
+    sheet.getRange(rowReal, 5).setValue(payload.keterangan); // E = Keterangan
+    
+    return { success: true, message: "Berhasil diedit" };
   } catch (e) {
     return { success: false, error: e.toString() };
   }

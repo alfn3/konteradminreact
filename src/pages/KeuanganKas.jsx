@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { gasService } from '../services/gas';
 import { 
   Wallet, TrendingUp, Plus, Search, Calendar, 
-  MapPin, CheckCircle, Clock, Trash2, X, Activity, FileText, ChevronDown, ChevronUp, Save
+  MapPin, CheckCircle, Clock, Trash2, X, Activity, FileText, ChevronDown, ChevronUp, Save, Edit2
 } from 'lucide-react';
 
 export default function KeuanganKas({ addToast }) {
@@ -30,6 +30,7 @@ export default function KeuanganKas({ addToast }) {
   const [dataKas, setDataKas] = useState([]);
   const [loadingKas, setLoadingKas] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [editKasId, setEditKasId] = useState(null);
   const [formData, setFormData] = useState({
     tanggal: new Date().toISOString().slice(0, 10),
     tipe: 'Pemasukan',
@@ -170,6 +171,19 @@ export default function KeuanganKas({ addToast }) {
   };
 
   // --- HANDLERS TAB 2 ---
+  const handleEditKas = (row) => {
+    const isMasuk = row.masuk && String(row.masuk).trim() !== '';
+    const nom = isMasuk ? String(row.masuk).replace(/[^0-9]/g, '') : String(row.keluar).replace(/[^0-9]/g, '');
+    setFormData({
+      tanggal: filterTanggal,
+      tipe: isMasuk ? 'Pemasukan' : 'Pengeluaran',
+      nominal: nom,
+      keterangan: row.keterangan || ''
+    });
+    setEditKasId(row.rowReal);
+    setShowModal(true);
+  };
+
   const handleSubmitKas = async (e) => {
     e.preventDefault();
     if (!formData.nominal || !formData.keterangan) {
@@ -182,14 +196,22 @@ export default function KeuanganKas({ addToast }) {
       const payload = {
         tanggal: formData.tanggal,
         tipe: formData.tipe,
-        nominal: parseInt(formData.nominal.replace(/[^0-9-]/g, ''), 10),
+        nominal: parseInt(String(formData.nominal).replace(/[^0-9-]/g, ''), 10),
         keterangan: formData.keterangan
       };
       
-      const res = await gasService.call('tambahManajemenKas', payload);
+      let res;
+      if (editKasId) {
+        payload.rowReal = editKasId;
+        res = await gasService.call('editManajemenKas', payload);
+      } else {
+        res = await gasService.call('tambahManajemenKas', payload);
+      }
+
       if (res.success || typeof res === 'string') {
-        addToast('Data kas berhasil ditambahkan', 'success');
+        addToast(editKasId ? 'Data kas berhasil diedit' : 'Data kas berhasil ditambahkan', 'success');
         setShowModal(false);
+        setEditKasId(null);
         setFormData({ ...formData, nominal: '', keterangan: '' });
         fetchManajemenKas();
       } else {
@@ -483,11 +505,34 @@ export default function KeuanganKas({ addToast }) {
                         </div>
                       </div>
                     ))}
-                    <div className="flex justify-between items-center text-sm font-bold pt-3 mt-3 border-t-2 border-indigo-500/50 text-white">
-                      <span>TOTAL PAGI + SORE</span>
-                      <span className={(fisikInputs["Sore-TOTAL_SEMUA"] || dataRincian.Sore?.TOTAL_SEMUA?.setoranAU || []).reduce((a,b)=>a+b,0) === (((dataRincian.Pagi?.TOTAL_SEMUA?.totalSetoranAU) || 0) + ((dataRincian.Sore?.TOTAL_SEMUA?.totalSetoranAU) || 0)) ? "text-emerald-400 text-base" : "text-rose-400 text-base"}>
-                        {formatRupiah((fisikInputs["Sore-TOTAL_SEMUA"] || dataRincian.Sore?.TOTAL_SEMUA?.setoranAU || []).reduce((a,b)=>a+b,0))}
-                      </span>
+                    <div className="flex justify-between items-start text-sm font-bold pt-3 mt-3 border-t-2 border-indigo-500/50 text-white">
+                      <span className="mt-1">TOTAL PAGI + SORE</span>
+                      <div className="flex flex-col items-end">
+                        <span className={(fisikInputs["Sore-TOTAL_SEMUA"] || dataRincian.Sore?.TOTAL_SEMUA?.setoranAU || []).reduce((a,b)=>a+b,0) === (((dataRincian.Pagi?.TOTAL_SEMUA?.totalSetoranAU) || 0) + ((dataRincian.Sore?.TOTAL_SEMUA?.totalSetoranAU) || 0)) ? "text-emerald-400 text-base" : "text-rose-400 text-base"}>
+                          {formatRupiah((fisikInputs["Sore-TOTAL_SEMUA"] || dataRincian.Sore?.TOTAL_SEMUA?.setoranAU || []).reduce((a,b)=>a+b,0))}
+                        </span>
+                        {(() => {
+                           const tfisik = (fisikInputs["Sore-TOTAL_SEMUA"] || dataRincian.Sore?.TOTAL_SEMUA?.setoranAU || []).reduce((a,b)=>a+b,0);
+                           const tsis = (((dataRincian.Pagi?.TOTAL_SEMUA?.totalSetoranAU) || 0) + ((dataRincian.Sore?.TOTAL_SEMUA?.totalSetoranAU) || 0));
+                           if (tsis > 0 && tfisik !== tsis) {
+                             const isSurplus = tfisik > tsis;
+                             return (
+                               <span className={`text-xs mt-1 px-2 py-1 rounded border ${isSurplus ? 'bg-blue-900/40 text-blue-300 border-blue-700/50' : 'bg-rose-900/40 text-rose-300 border-rose-700/50'} flex items-center`}>
+                                 {isSurplus ? <Plus className="w-3 h-3 mr-1" /> : <X className="w-3 h-3 mr-1" />}
+                                 {isSurplus ? 'Lebih' : 'Selisih'} {formatRupiah(Math.abs(tsis - tfisik))}
+                               </span>
+                             );
+                           }
+                           if (tsis > 0 && tfisik === tsis) {
+                             return (
+                               <span className="text-xs mt-1 px-2 py-1 rounded border bg-emerald-900/40 text-emerald-300 border-emerald-700/50 flex items-center">
+                                 <CheckCircle className="w-3 h-3 mr-1" /> Sesuai
+                               </span>
+                             );
+                           }
+                           return null;
+                        })()}
+                      </div>
                     </div>
                     <button
                       onClick={async () => {
@@ -634,7 +679,10 @@ export default function KeuanganKas({ addToast }) {
                         <td className="px-4 py-3 text-right font-semibold text-slate-700">
                           {row.saldo}
                         </td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-4 py-3 text-center flex justify-center gap-1">
+                          <button onClick={() => handleEditKas(row)} className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" title="Edit Mutasi">
+                            <Edit2 className="w-4 h-4" />
+                          </button>
                           <button onClick={(e) => handleHapusKas(row.rowReal, e)} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors" title="Hapus Mutasi">
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -736,13 +784,13 @@ export default function KeuanganKas({ addToast }) {
         </div>
       )}
 
-      {/* MODAL TAMBAH KAS */}
+      {/* MODAL TAMBAH/EDIT KAS */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-              <h3 className="font-bold text-lg text-slate-800">Catat Mutasi Kas</h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 transition-colors">
+              <h3 className="font-bold text-lg text-slate-800">{editKasId ? 'Edit Mutasi Kas' : 'Catat Mutasi Kas'}</h3>
+              <button onClick={() => { setShowModal(false); setEditKasId(null); }} className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -794,12 +842,12 @@ export default function KeuanganKas({ addToast }) {
                 />
               </div>
               <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
-                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                <button type="button" onClick={() => { setShowModal(false); setEditKasId(null); }} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
                   Batal
                 </button>
                 <button type="submit" disabled={isSubmitting} className="px-6 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors disabled:opacity-50 flex items-center shadow-sm">
-                  {isSubmitting ? <Activity className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
-                  {isSubmitting ? 'Menyimpan...' : 'Simpan Mutasi'}
+                  {isSubmitting ? <Activity className="w-4 h-4 animate-spin mr-2" /> : (editKasId ? <Edit2 className="w-4 h-4 mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />)}
+                  {isSubmitting ? 'Menyimpan...' : (editKasId ? 'Simpan Perubahan' : 'Simpan Mutasi')}
                 </button>
               </div>
             </form>
