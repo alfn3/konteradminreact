@@ -138,6 +138,20 @@ export default function KeuanganKas({ addToast }) {
     });
   };
 
+  const handleFisikKeyDown = (e, shift, konter, index) => {
+    const isUp = e.key === 'ArrowUp';
+    const isDown = e.key === 'ArrowDown' || e.key === 'Enter';
+    
+    if (isUp || isDown) {
+      e.preventDefault();
+      const nextIndex = index + (isUp ? -1 : 1);
+      if (nextIndex >= 0 && nextIndex <= 8) {
+        const nextInput = document.getElementById(`input-fisik-${shift}-${konter}-${nextIndex}`);
+        if (nextInput) nextInput.focus();
+      }
+    }
+  };
+
   const handleSaveFisik = async (shift, konter) => {
     const key = `${shift}-${konter}`;
     const values = fisikInputs[key];
@@ -424,9 +438,11 @@ export default function KeuanganKas({ addToast }) {
                                  <div className="relative w-2/3">
                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-medium">Rp</span>
                                     <input 
+                                      id={`input-fisik-${shiftName}-${konterName}-${idx}`}
                                       type="text" 
                                       value={val === 0 ? '' : (val === '-' ? '-' : new Intl.NumberFormat('id-ID').format(val))}
                                       onChange={(e) => handleFisikChange(shiftName, konterName, idx, e.target.value)}
+                                      onKeyDown={(e) => handleFisikKeyDown(e, shiftName, konterName, idx)}
                                       className="w-full pl-8 pr-3 py-1.5 text-right text-sm font-medium border border-slate-200 rounded-md focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
                                       placeholder="0"
                                     />
@@ -496,9 +512,11 @@ export default function KeuanganKas({ addToast }) {
                         <div className="relative w-1/2">
                           <span className="absolute left-2 top-1/2 -translate-y-1/2 text-indigo-400 text-xs">Rp</span>
                           <input 
+                            id={`input-fisik-Sore-TOTAL_SEMUA-${idx}`}
                             type="text" 
                             value={val === 0 ? '' : (val === '-' ? '-' : new Intl.NumberFormat('id-ID').format(val))}
                             onChange={(e) => handleFisikChange("Sore", "TOTAL_SEMUA", idx, e.target.value)}
+                            onKeyDown={(e) => handleFisikKeyDown(e, "Sore", "TOTAL_SEMUA", idx)}
                             className="w-full pl-7 pr-2 py-1 text-right text-sm font-medium bg-indigo-900/50 border border-indigo-700 rounded focus:border-indigo-400 focus:outline-none text-white"
                             placeholder="0"
                           />

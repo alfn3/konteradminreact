@@ -347,14 +347,27 @@ const DataStok = ({ addToast }) => {
                           value={modifiedStok[item.realRow]?.[field] ?? (item[field] === 0 ? '' : (item[field] ?? ''))}
                           onChange={(e) => handleStokChange(item, field, e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault();
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              e.target.blur();
+                            const isUp = e.key === 'ArrowUp';
+                            const isDown = e.key === 'ArrowDown' || e.key === 'Enter';
+                            const isLeft = e.key === 'ArrowLeft';
+                            const isRight = e.key === 'ArrowRight';
+                            
+                            if (isUp || isDown || isLeft || isRight) {
                               const currentIndex = arr.findIndex(x => x.realRow === item.realRow);
-                              if (currentIndex !== -1 && currentIndex < arr.length - 1) {
-                                const nextRow = arr[currentIndex + 1].realRow;
-                                setTimeout(() => setEditingCell({ row: nextRow, field }), 10);
+                              if (isUp || isDown) {
+                                e.preventDefault(); e.target.blur();
+                                const dir = isUp ? -1 : 1;
+                                if (currentIndex + dir >= 0 && currentIndex + dir < arr.length) {
+                                  setTimeout(() => setEditingCell({ row: arr[currentIndex + dir].realRow, field }), 10);
+                                }
+                              } else if (isLeft || isRight) {
+                                if (isLeft && field === 'stokAkhir') {
+                                  e.preventDefault(); e.target.blur();
+                                  setTimeout(() => setEditingCell({ row: item.realRow, field: 'topup' }), 10);
+                                } else if (isRight && field === 'topup') {
+                                  e.preventDefault(); e.target.blur();
+                                  setTimeout(() => setEditingCell({ row: item.realRow, field: 'stokAkhir' }), 10);
+                                }
                               }
                             }
                           }}
@@ -440,24 +453,39 @@ const DataStok = ({ addToast }) => {
                 value={editValue}
                 onChange={(e) => handlePengeluaranChange(item, field, e.target.value)}
                 onKeyDown={(e) => {
-                  if (isNumber && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) e.preventDefault();
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    e.target.blur();
-                    const arrPeng = stokData.pengeluaran?.filter(i => {
-                      if (!hideEmpty) return true;
-                      if (editingCell?.row === i.row) return true;
-                      const mod = modifiedPengeluaran[i.row];
-                      const nom = Number(mod?.nominal ?? i.nominal) || 0;
-                      const ket = ((mod?.keterangan ?? i.keterangan) || '').toString().trim();
-                      return nom !== 0 || (ket !== '' && ket !== '-');
-                    }) || [];
-                    const currentIndex = arrPeng.findIndex(x => x.row === item.row);
-                    if (currentIndex !== -1 && currentIndex < arrPeng.length - 1) {
-                      setTimeout(() => setEditingCell({ row: arrPeng[currentIndex + 1].row, field }), 10);
+                    const isUp = e.key === 'ArrowUp';
+                    const isDown = e.key === 'ArrowDown' || e.key === 'Enter';
+                    const isLeft = e.key === 'ArrowLeft';
+                    const isRight = e.key === 'ArrowRight';
+                    
+                    if (isUp || isDown || isLeft || isRight) {
+                      const arrPeng = stokData.pengeluaran?.filter(i => {
+                        if (!hideEmpty) return true;
+                        if (editingCell?.row === i.row) return true;
+                        const mod = modifiedPengeluaran[i.row];
+                        const nom = Number(mod?.nominal ?? i.nominal) || 0;
+                        const ket = ((mod?.keterangan ?? i.keterangan) || '').toString().trim();
+                        return nom !== 0 || (ket !== '' && ket !== '-');
+                      }) || [];
+                      const currentIndex = arrPeng.findIndex(x => x.row === item.row);
+                      
+                      if (isUp || isDown) {
+                        e.preventDefault(); e.target.blur();
+                        const dir = isUp ? -1 : 1;
+                        if (currentIndex + dir >= 0 && currentIndex + dir < arrPeng.length) {
+                          setTimeout(() => setEditingCell({ row: arrPeng[currentIndex + dir].row, field }), 10);
+                        }
+                      } else if (isLeft || isRight) {
+                        if (isLeft && field === 'keterangan') {
+                          e.preventDefault(); e.target.blur();
+                          setTimeout(() => setEditingCell({ row: item.row, field: 'nominal' }), 10);
+                        } else if (isRight && field === 'nominal') {
+                          e.preventDefault(); e.target.blur();
+                          setTimeout(() => setEditingCell({ row: item.row, field: 'keterangan' }), 10);
+                        }
+                      }
                     }
-                  }
-                }}
+                  }}
               />
             </div>
           );
@@ -536,17 +564,32 @@ const DataStok = ({ addToast }) => {
                 value={editValue}
                 onChange={(e) => handleElektrikChange(item, field, e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault();
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    e.target.blur();
-                    const arrElektrik = stokData.elektrik || [];
-                    const currentIndex = arrElektrik.findIndex(x => x.realRow === item.realRow);
-                    if (currentIndex !== -1 && currentIndex < arrElektrik.length - 1) {
-                      setTimeout(() => setEditingCell({ row: arrElektrik[currentIndex + 1].realRow, field }), 10);
+                    const isUp = e.key === 'ArrowUp';
+                    const isDown = e.key === 'ArrowDown' || e.key === 'Enter';
+                    const isLeft = e.key === 'ArrowLeft';
+                    const isRight = e.key === 'ArrowRight';
+                    
+                    if (isUp || isDown || isLeft || isRight) {
+                      const arrElektrik = stokData.elektrik || [];
+                      const currentIndex = arrElektrik.findIndex(x => x.realRow === item.realRow);
+                      
+                      if (isUp || isDown) {
+                        e.preventDefault(); e.target.blur();
+                        const dir = isUp ? -1 : 1;
+                        if (currentIndex + dir >= 0 && currentIndex + dir < arrElektrik.length) {
+                          setTimeout(() => setEditingCell({ row: arrElektrik[currentIndex + dir].realRow, field }), 10);
+                        }
+                      } else if (isLeft || isRight) {
+                        const fields = ['saldoAwal', 'topup', 'saldoAkhir'];
+                        const fIdx = fields.indexOf(field);
+                        const newFIdx = fIdx + (isLeft ? -1 : 1);
+                        if (newFIdx >= 0 && newFIdx < fields.length) {
+                          e.preventDefault(); e.target.blur();
+                          setTimeout(() => setEditingCell({ row: item.realRow, field: fields[newFIdx] }), 10);
+                        }
+                      }
                     }
-                  }
-                }}
+                  }}
               />
             </div>
           );
@@ -622,16 +665,18 @@ const DataStok = ({ addToast }) => {
                 value={modifiedUang[item.row]?.list ?? (item.list || '')}
                 onChange={(e) => handleUangChange(item, e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    e.target.blur();
-                    const arrUang = stokData.uang || [];
-                    const currentIndex = arrUang.findIndex(x => x.row === item.row);
-                    if (currentIndex !== -1 && currentIndex < arrUang.length - 1) {
-                      setTimeout(() => setEditingCell({ row: arrUang[currentIndex + 1].row, field: 'list' }), 10);
+                    const isUp = e.key === 'ArrowUp';
+                    const isDown = e.key === 'ArrowDown' || e.key === 'Enter';
+                    if (isUp || isDown) {
+                      e.preventDefault(); e.target.blur();
+                      const arrUang = stokData.uang || [];
+                      const currentIndex = arrUang.findIndex(x => x.row === item.row);
+                      const dir = isUp ? -1 : 1;
+                      if (currentIndex + dir >= 0 && currentIndex + dir < arrUang.length) {
+                        setTimeout(() => setEditingCell({ row: arrUang[currentIndex + dir].row, field: 'list' }), 10);
+                      }
                     }
-                  }
-                }}
+                  }}
               />
             </div>
           );
