@@ -8,7 +8,7 @@ const DataStok = ({ addToast }) => {
   const [toko, setToko] = useState(''); // Akan di-set setelah fetch konter
   const [konterOptions, setKonterOptions] = useState([]);
   const [storeColors, setStoreColors] = useState({});
-  
+
   // Tanggal default: Hari ini (YYYY-MM-DD)
   const [tanggal, setTanggal] = useState(() => {
     const today = new Date();
@@ -18,7 +18,7 @@ const DataStok = ({ addToast }) => {
   const [loading, setLoading] = useState(false);
   const [stokData, setStokData] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
-  
+
   const [modifiedStok, setModifiedStok] = useState({});
   const [modifiedPengeluaran, setModifiedPengeluaran] = useState({});
   const [modifiedUang, setModifiedUang] = useState({});
@@ -67,14 +67,14 @@ const DataStok = ({ addToast }) => {
           value: item[1] || item[0] || '' // Gunakan Nama Sheet (col 1), jika kosong gunakan Nama Konter
         }));
         setKonterOptions(options);
-        
+
         // Build storeColors mapping
         const colors = {};
         res.data.forEach(item => {
           if (item[0]) colors[item[0]] = item[3] || '#3B82F6';
         });
         setStoreColors(colors);
-        
+
         // Auto select first option if toko is empty
         if (!toko && options.length > 0) {
           setToko(options[0].value);
@@ -91,14 +91,14 @@ const DataStok = ({ addToast }) => {
 
   useEffect(() => {
     if (!toko) return; // Jangan fetch stok jika toko belum terpilih
-    
+
     setModifiedStok({}); // Reset modified stok saat pindah tanggal/toko
     setModifiedPengeluaran({});
     setModifiedUang({});
     setModifiedElektrik({});
     fetchStok();
   }, [toko, tanggal]);
-  
+
   const handleStokChange = (item, field, value) => {
     // Hanya allow edit topup dan stokAkhir
     if (field === 'stokAwal') return;
@@ -157,10 +157,10 @@ const DataStok = ({ addToast }) => {
     const updatesPengeluaran = Object.values(modifiedPengeluaran);
     const updatesUang = Object.values(modifiedUang);
     const updatesElektrik = Object.values(modifiedElektrik);
-    
+
     const totalUpdates = updates.length + updatesPengeluaran.length + updatesUang.length + updatesElektrik.length;
     if (totalUpdates === 0) return;
-    
+
     setIsSaving(true);
     try {
       const res = await gasService.call('batchUpdateStok', { toko, tanggal, updates, updatesPengeluaran, updatesUang, updatesElektrik });
@@ -267,17 +267,17 @@ const DataStok = ({ addToast }) => {
                 const topup = Number(topupVal) || 0;
                 const akhir = Number(akhirVal) || 0;
                 const terjual = (awal + topup) - akhir;
-                
+
                 // Bersihkan string harga dari karakter non-digit (seperti "Rp", ".", ",")
                 let rawHarga = String(item.harga || '0').replace(/[^0-9]/g, '');
                 const hargaNum = Number(rawHarga) || 0;
-                
+
                 // Paksa provider jika aksesoris dan masih "-"
                 let providerText = item.provider || '-';
                 if (activeTab === 'acc' && providerText === '-') {
                   providerText = 'KABEL DATA TOPLES';
                 }
-                
+
                 // Cek perubahan provider untuk border separator
                 let isProviderChanged = false;
                 if (idx > 0) {
@@ -285,37 +285,37 @@ const DataStok = ({ addToast }) => {
                   if (activeTab === 'acc' && prevProvider === '-') prevProvider = 'KABEL DATA TOPLES';
                   isProviderChanged = providerText !== prevProvider;
                 }
-                
+
                 // Fungsi untuk mendapatkan warna badge unik berdasarkan nama provider
                 const getProviderBadge = (providerName) => {
                   if (!providerName || providerName === '-') return 'bg-slate-100 text-slate-600';
-                  
+
                   const nameUpper = providerName.toUpperCase();
                   if (nameUpper.includes('TELKOMSEL') || nameUpper.includes('AS') || nameUpper.includes('SIMPATI')) {
-                     return 'bg-red-100 text-red-700 font-bold';
+                    return 'bg-red-100 text-red-700 font-bold';
                   }
                   if (nameUpper.includes('INDOSAT') || nameUpper.includes('IM3')) {
-                     return 'bg-yellow-100 text-yellow-700 font-bold';
+                    return 'bg-yellow-100 text-yellow-700 font-bold';
                   }
                   if (nameUpper === 'XL' || nameUpper.includes('XL AXIATA')) {
-                     return 'bg-blue-100 text-blue-700 font-bold';
+                    return 'bg-blue-100 text-blue-700 font-bold';
                   }
                   if (nameUpper.includes('AXIS')) {
-                     return 'bg-purple-100 text-purple-700 font-bold';
+                    return 'bg-purple-100 text-purple-700 font-bold';
                   }
                   if (nameUpper.includes('SMARTFREN')) {
-                     return 'bg-pink-100 text-pink-700 font-bold';
+                    return 'bg-pink-100 text-pink-700 font-bold';
                   }
                   if (nameUpper === 'TRI' || nameUpper === 'THREE' || nameUpper === '3' || nameUpper.includes('THREE')) {
-                     return 'bg-slate-800 text-white font-bold';
+                    return 'bg-slate-800 text-white font-bold';
                   }
-                  
+
                   // Simple hash function to generate consistent colors for ACC
                   let hash = 0;
                   for (let i = 0; i < providerName.length; i++) {
                     hash = providerName.charCodeAt(i) + ((hash << 5) - hash);
                   }
-                  
+
                   // Palette warna pastel/modern
                   const colors = [
                     'bg-emerald-100 text-emerald-700',
@@ -326,19 +326,19 @@ const DataStok = ({ addToast }) => {
                     'bg-fuchsia-100 text-fuchsia-700',
                     'bg-orange-100 text-orange-700'
                   ];
-                  
+
                   return colors[Math.abs(hash) % colors.length];
                 };
-                
+
                 const badgeClass = getProviderBadge(providerText);
-                
+
                 const renderEditableCell = (field, val, extraClass = '') => {
                   const isEditing = editingCell?.row === item.realRow && editingCell?.field === field;
 
                   if (isEditing && isEditMode) {
                     return (
                       <div className={`flex items-center justify-center p-1 rounded bg-white shadow-sm ring-1 ring-primary/50 ${extraClass}`}>
-                        <input 
+                        <input
                           type="number"
                           autoFocus
                           onBlur={() => setEditingCell(null)}
@@ -364,7 +364,7 @@ const DataStok = ({ addToast }) => {
                   }
 
                   return (
-                    <div 
+                    <div
                       className={`group flex items-center justify-center p-1.5 rounded transition-colors ${isEditMode ? 'cursor-pointer hover:bg-slate-200/50' : ''} ${extraClass}`}
                       onClick={() => isEditMode && setEditingCell({ row: item.realRow, field })}
                       title={isEditMode ? 'Klik untuk edit' : ''}
@@ -374,7 +374,7 @@ const DataStok = ({ addToast }) => {
                     </div>
                   );
                 };
-                
+
                 const gudangRaw = item.stokGudang === "" ? "" : (Number(item.stokGudang) - topup);
                 let gudangTextClass = 'text-slate-800 font-bold';
                 let gudangText = gudangRaw;
@@ -383,7 +383,7 @@ const DataStok = ({ addToast }) => {
                 } else if (gudangRaw < 0) {
                   gudangTextClass = 'text-rose-600 font-bold';
                 }
-                
+
                 return (
                   <tr key={idx} className={`hover:bg-slate-50/50 ${isProviderChanged ? 'border-t-2 border-dashed border-slate-300' : ''}`}>
                     <td className="px-4 py-3 text-slate-500">{idx + 1}</td>
@@ -402,9 +402,8 @@ const DataStok = ({ addToast }) => {
                     </td>
                     <td className="px-4 py-3 text-right">Rp {hargaNum.toLocaleString('id-ID')}</td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        terjual > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
-                      }`}>
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${terjual > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                        }`}>
                         {terjual}
                       </span>
                     </td>
@@ -431,7 +430,7 @@ const DataStok = ({ addToast }) => {
           }
           return (
             <div className="flex items-center p-1 rounded bg-white shadow-sm ring-1 ring-primary/50 w-full">
-              <input 
+              <input
                 type={isNumber ? "number" : "text"}
                 autoFocus
                 onBlur={() => setEditingCell(null)}
@@ -462,9 +461,9 @@ const DataStok = ({ addToast }) => {
             </div>
           );
         }
-        
+
         return (
-          <div 
+          <div
             className={`group flex items-center p-1.5 rounded transition-colors min-h-[2.5rem] ${isEditMode ? 'cursor-pointer hover:bg-slate-200/50' : ''}`}
             onClick={() => isEditMode && setEditingCell({ row: item.row, field })}
             title={isEditMode ? "Klik untuk edit" : ""}
@@ -474,7 +473,7 @@ const DataStok = ({ addToast }) => {
           </div>
         );
       };
-      
+
       return (
         <div className="overflow-x-auto w-full p-4">
           <table className="w-full text-sm text-left">
@@ -497,7 +496,7 @@ const DataStok = ({ addToast }) => {
                 const mod = modifiedPengeluaran[item.row];
                 const nominal = mod?.nominal ?? item.nominal;
                 const keterangan = mod?.keterangan ?? item.keterangan;
-                
+
                 return (
                   <tr key={idx} className="hover:bg-slate-50/50">
                     <td className="px-4 py-3 text-slate-500">{idx + 1}</td>
@@ -515,7 +514,7 @@ const DataStok = ({ addToast }) => {
         </div>
       );
     }
-    
+
     // TAB ELEKTRIK
     if (activeTab === 'elektrik') {
       const renderEditableElektrik = (item, field, val) => {
@@ -527,7 +526,7 @@ const DataStok = ({ addToast }) => {
           }
           return (
             <div className="flex items-center p-1 rounded bg-white shadow-sm ring-1 ring-primary/50 w-full justify-center max-w-[120px] mx-auto">
-              <input 
+              <input
                 type="number"
                 autoFocus
                 onBlur={() => setEditingCell(null)}
@@ -551,9 +550,9 @@ const DataStok = ({ addToast }) => {
             </div>
           );
         }
-        
+
         return (
-          <div 
+          <div
             className={`group flex items-center justify-center p-1.5 rounded transition-colors min-h-[2.5rem] ${isEditMode ? 'cursor-pointer hover:bg-slate-200/50' : ''}`}
             onClick={() => isEditMode && setEditingCell({ row: item.realRow, field })}
             title={isEditMode ? "Klik untuk edit" : ""}
@@ -578,18 +577,18 @@ const DataStok = ({ addToast }) => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {stokData.elektrik?.map((item, idx) => {
-                 const mod = modifiedElektrik[item.realRow];
-                 const awal = mod?.saldoAwal ?? item.saldoAwal;
-                 const topup = mod?.topup ?? item.topup;
-                 const akhir = mod?.saldoAkhir ?? item.saldoAkhir;
-                 
-                 const parseNum = (val) => Number(String(val || '0').replace(/[^0-9-]/g, '')) || 0;
-                 const numAwal = parseNum(awal);
-                 const numTopup = parseNum(topup);
-                 const numAkhir = parseNum(akhir);
-                 const terjual = numAwal + numTopup - numAkhir;
-                 
-                 return (
+                const mod = modifiedElektrik[item.realRow];
+                const awal = mod?.saldoAwal ?? item.saldoAwal;
+                const topup = mod?.topup ?? item.topup;
+                const akhir = mod?.saldoAkhir ?? item.saldoAkhir;
+
+                const parseNum = (val) => Number(String(val || '0').replace(/[^0-9-]/g, '')) || 0;
+                const numAwal = parseNum(awal);
+                const numTopup = parseNum(topup);
+                const numAkhir = parseNum(akhir);
+                const terjual = numAwal + numTopup - numAkhir;
+
+                return (
                   <tr key={idx} className="hover:bg-slate-50/50">
                     <td className="px-4 py-3 text-slate-500">{idx + 1}</td>
                     <td className="px-2 py-3 text-center">{renderEditableElektrik(item, 'saldoAwal', awal)}</td>
@@ -597,14 +596,14 @@ const DataStok = ({ addToast }) => {
                     <td className="px-2 py-3 text-center font-semibold text-slate-700">{renderEditableElektrik(item, 'saldoAkhir', akhir)}</td>
                     <td className="px-4 py-3 text-center font-bold text-primary">{terjual.toLocaleString('id-ID')}</td>
                   </tr>
-                 );
+                );
               })}
             </tbody>
           </table>
         </div>
       );
     }
-    
+
     // TAB UANG (List Ke Bawah & CRUD)
     if (activeTab === 'uang') {
       const renderEditableUang = (item, val) => {
@@ -612,7 +611,7 @@ const DataStok = ({ addToast }) => {
         if (isEditing && isEditMode) {
           return (
             <div className="flex items-center p-1 rounded bg-white shadow-sm ring-1 ring-primary/50 w-full max-w-[250px]">
-              <input 
+              <input
                 type="text"
                 autoFocus
                 onBlur={() => setEditingCell(null)}
@@ -634,9 +633,9 @@ const DataStok = ({ addToast }) => {
             </div>
           );
         }
-        
+
         return (
-          <div 
+          <div
             className={`group flex items-center p-1.5 rounded transition-colors min-h-[2.5rem] ${isEditMode ? 'cursor-pointer hover:bg-slate-200/50' : ''}`}
             onClick={() => isEditMode && setEditingCell({ row: item.row, field: 'list' })}
             title={isEditMode ? "Klik untuk edit" : ""}
@@ -662,16 +661,16 @@ const DataStok = ({ addToast }) => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {stokData.uang?.map((item, idx) => {
-                 const mod = modifiedUang[item.row];
-                 const listVal = mod?.list ?? item.list;
-                 return (
+                const mod = modifiedUang[item.row];
+                const listVal = mod?.list ?? item.list;
+                return (
                   <tr key={idx} className="hover:bg-slate-50/50">
                     <td className="px-4 py-3 text-slate-500">{idx + 1}</td>
                     <td className="px-2 py-3 font-semibold text-slate-700">
-                       {renderEditableUang(item, listVal)}
+                      {renderEditableUang(item, listVal)}
                     </td>
                   </tr>
-                 );
+                );
               })}
             </tbody>
           </table>
@@ -690,8 +689,8 @@ const DataStok = ({ addToast }) => {
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#64748B" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          <input 
-            type="date" 
+          <input
+            type="date"
             value={tanggal}
             onChange={(e) => setTanggal(e.target.value)}
             className="text-xs text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 outline-none cursor-pointer"
@@ -701,14 +700,14 @@ const DataStok = ({ addToast }) => {
         {konterOptions.length === 0 ? (
           <div className="h-8 w-32 bg-slate-200 rounded-lg animate-pulse"></div>
         ) : (
-          <select 
+          <select
             value={toko}
             onChange={(e) => setToko(e.target.value)}
             className="text-xs font-bold rounded-lg px-3 py-1.5 outline-none cursor-pointer transition-colors shadow-sm"
-            style={{ 
-               backgroundColor: toko ? (storeColors[konterOptions.find(o => o.value === toko)?.label] || storeColors[toko] || '#3B82F6') : '#3B82F6', 
-               color: '#fff',
-               border: 'none'
+            style={{
+              backgroundColor: toko ? (storeColors[konterOptions.find(o => o.value === toko)?.label] || storeColors[toko] || '#3B82F6') : '#3B82F6',
+              color: '#fff',
+              border: 'none'
             }}
           >
             {konterOptions.map((opt, idx) => (
@@ -716,26 +715,25 @@ const DataStok = ({ addToast }) => {
             ))}
           </select>
         )}
-        
+
         <div className="ml-auto flex items-center gap-2">
-          <button 
+          <button
             onClick={() => {
               setIsEditMode(!isEditMode);
               setEditingCell(null); // Reset mode edit ketika toggle
             }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-              isEditMode ? 'bg-primary text-white hover:bg-primary/90' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${isEditMode ? 'bg-primary text-white hover:bg-primary/90' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
           >
             {isEditMode ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
             {isEditMode ? 'Edit Mode: ON' : 'Edit Mode: OFF'}
           </button>
-          
+
           <button onClick={() => setHideEmpty(!hideEmpty)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">
             {hideEmpty ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
             {hideEmpty ? 'Tampilkan Kosong' : 'Sembunyikan Kosong'}
           </button>
-          
+
           <button onClick={fetchStok} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -748,7 +746,7 @@ const DataStok = ({ addToast }) => {
         <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="mt-0.5 flex-shrink-0">
           <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        <span>Jika ingin ubah stok awal tgl ini cukup ubah stok akhir sift sore kemarin.</span>
+        <span>Stok awal dikunci. Otomatis mengikuti stok akhir shift sebelumnya. Silakan edit stok akhir shift sebelumnya.</span>
       </div>
 
       {/* Tabs & Info */}
@@ -806,11 +804,11 @@ const DataStok = ({ addToast }) => {
       <div className="bg-white rounded-xl overflow-hidden" style={{ border: '1px solid #E2E8F0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
         {renderTableContent()}
       </div>
-      
+
       {/* FAB BATCH SAVE */}
       {(Object.keys(modifiedStok).length > 0 || Object.keys(modifiedPengeluaran).length > 0 || Object.keys(modifiedUang).length > 0 || Object.keys(modifiedElektrik).length > 0) && (
         <div className="fixed bottom-8 right-8 z-50">
-          <button 
+          <button
             onClick={handleBatchSave}
             disabled={isSaving}
             className="flex items-center shadow-lg bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-full font-bold transition-transform transform hover:scale-105 disabled:opacity-70 disabled:hover:scale-100"
