@@ -149,11 +149,11 @@ function getDashboardStats() {
                       if (rowBulananBefore) {
                const nm = namaToko.toUpperCase();
                let cIdx = -1;
-               if (nm.includes("M1")) cIdx = 66; // Index M1 Pagi (kolom BO)
-               else if (nm.includes("M2")) cIdx = 68; // Index M2 Pagi
-               else if (nm.includes("TOKO") || nm.includes("PUSAT")) cIdx = 70; // Index Toko Pagi
-               else if (nm.includes("M4")) cIdx = 72; // Index M4 Pagi
-               else if (nm.includes("JAYA")) cIdx = 74; // Index Jaya Pagi
+               if (nm.includes("M1")) cIdx = 76; // Index M1 Pagi
+               else if (nm.includes("M2")) cIdx = 78; // Index M2 Pagi
+               else if (nm.includes("TOKO") || nm.includes("PUSAT") || nm.includes("M3")) cIdx = 80; // Index Toko/M3 Pagi
+               else if (nm.includes("M4")) cIdx = 82; // Index M4 Pagi
+               else if (nm.includes("JAYA") || nm.includes("M5")) cIdx = 84; // Index Jaya/M5 Pagi
                
                if (cIdx !== -1) {
                   const oPagi = Number(String(rowBulananBefore[cIdx]).replace(/[^0-9-]/g, '')) || 0;
@@ -976,6 +976,66 @@ function getDataStok(params) {
     const valInfoJaga = values[34] ? values[34][16] : "-";
     // ---------------------------------------------------------------------
 
+    if (toko.toLowerCase() === "stok gudang") {
+       const processStokGudang = (startRow, endRow, headerList) => {
+         const res = [];
+         let currentProvider = "-";
+
+         for (let i = startRow - 1; i < endRow; i++) {
+           if (!values[i]) continue;
+           const row = values[i];
+           const colA = String(row[0] || "").trim();
+           const stokAwal = String(row[1] || "").trim(); // Kolom B
+           const topup = String(row[2] || "").trim(); // Kolom C
+           const stokAkhir = String(row[9] || "").trim(); // Kolom J
+           const harga = String(row[11] || "").trim(); // Kolom L (Harga Jual)
+           const hpp = String(row[12] || "").trim(); // Kolom M (HPP)
+           const stokGudangVal = String(row[27] || "").trim();
+
+           if (colA === "") continue;
+
+           const isHeader = headerList.some(h => h.toLowerCase() === colA.toLowerCase());
+           
+           if (isHeader) {
+               currentProvider = colA;
+               continue;
+           }
+
+           res.push({ 
+              realRow: i + 1, 
+              provider: currentProvider, 
+              nama: colA, 
+              stokAwal: stokAwal, 
+              topup: topup, 
+              stokAkhir: stokAkhir, 
+              harga: harga,
+              hpp: hpp,
+              stokGudang: stokGudangVal
+           });
+         }
+         return res;
+       };
+
+       const headerVoucher = ["Smartfren", "Byu", "Three", "Telkomsel", "Indosat", "XL", "Axis"];
+       const headerPerdana = ["Reguler", "Three", "Indosat", "Axis", "Smartfren", "BYU", "Telkomsel", "XL"];
+       const headerAcc = ["Kabel", "OTG", "Kepala Charger", "Earphone", "MMC", "Flashdisk", "Travel Charger", "Powerbank"];
+
+       return { 
+         success: true, 
+         isHistory: isHistoryMode,
+         data: {
+           voucher: processStokGudang(5, 94, headerVoucher),
+           perdana: processStokGudang(96, 146, headerPerdana),
+           acc: processStokGudang(148, 320, headerAcc),
+           pengeluaran: [],
+           uang: [],
+           elektrik: [],
+           selisih: 0,
+           infoJaga: "-"
+         }
+       };
+    }
+
     return { 
       success: true, 
       isHistory: isHistoryMode, // KIRIM STATUS FILE KE FRONTEND
@@ -1046,15 +1106,36 @@ function batchUpdateStok(params) {
     let totalChanges = 0;
     let syncInfo = null;
 
-    // params.updates = [{ row: 5, topup: 5, stokAkhir: 8 }, ...]
-    // Hanya update kolom E (topup) dan F (stokAkhir)
+    const isGudang = params.toko.toLowerCase() === "stok gudang";
+
     if (params.updates && Array.isArray(params.updates)) {
       params.updates.forEach(item => {
-        if (item.topup !== undefined) {
-          sheet.getRange(item.row, 5).setValue(item.topup);    // Kolom E = Topup
-        }
-        if (item.stokAkhir !== undefined) {
-          sheet.getRange(item.row, 6).setValue(item.stokAkhir); // Kolom F = Stok Akhir
+        if (isGudang) {
+          if (item.topup !== undefined) {
+            sheet.getRange(item.row, 3).setValue(item.topup);    // Kolom C = Topup Gudang
+          }
+          if (item.stokAkhir !== undefined) {
+            sheet.getRange(item.row, 10).setValue(item.stokAkhir); // Kolom J = Stok Akhir Gudang
+          }
+          if (item.hj !== undefined) {
+            sheet.getRange(item.row, 12).setValue(item.hj); // Kolom L = Harga Jual Gudang
+          }
+          if (item.hpp !== undefined) {
+            sheet.getRange(item.row, 13).setValue(item.hpp); // Kolom M = HPP Gudang
+          }
+        } else {
+          if (item.topup !== undefined) {
+            sheet.getRange(item.row, 5).setValue(item.topup);    // Kolom E = Topup Konter
+          }
+          if (item.stokAkhir !== undefined) {
+            sheet.getRange(item.row, 6).setValue(item.stokAkhir); // Kolom F = Stok Akhir Konter
+          }
+          if (item.hj !== undefined) {
+            sheet.getRange(item.row, 12).setValue(item.hj); // Kolom L = Harga Jual Konter
+          }
+          if (item.hpp !== undefined) {
+            sheet.getRange(item.row, 13).setValue(item.hpp); // Kolom M = HPP Konter
+          }
         }
       });
       totalChanges += params.updates.length;
@@ -1065,12 +1146,14 @@ function batchUpdateStok(params) {
     // Rantai: [x sore T] stok akhir -> [x pagi T+1] stok awal
     // x pagi T -> x sore T sudah dihandle rumus dalam file yang sama, tidak perlu sync
     // -----------------------------------------------
-    if (params.updates && Array.isArray(params.updates) && params.updates.length > 0 && params.tanggal) {
+    const todayForSync = new Date();
+    const todaySyncStr = todayForSync.getFullYear() + '-' + String(todayForSync.getMonth()+1).padStart(2,'0') + '-' + String(todayForSync.getDate()).padStart(2,'0');
+
+    if (params.updates && Array.isArray(params.updates) && params.updates.length > 0 && params.tanggal && params.tanggal !== todaySyncStr) {
       try {
         var tokoName = params.toko || '';
         var tokoLower = tokoName.toLowerCase();
 
-        // Tentukan sheet target di T+1:
         // Jika sheet adalah "x sore" → target adalah "x pagi" di T+1
         // Jika sheet adalah "x pagi" → tidak ada sync antar hari (rumus menangani pagi→sore hari yang sama)
         // Jika sheet tidak punya suffix pagi/sore → sync ke sheet yang sama di T+1
@@ -1145,13 +1228,18 @@ function batchUpdateStok(params) {
             nextDayFileId = getFileIdByDate(nextDayStr);
           }
 
-          if (nextDayFileId) {
+          if (nextDayFileId && nextDayFileId.length > 20) {
             const nextDaySs = SpreadsheetApp.openById(nextDayFileId);
             const nextDaySheet = nextDaySs.getSheetByName(targetSheetName);
             if (nextDaySheet) {
+              const isGudangSync = targetSheetName.toLowerCase() === "stok gudang";
               params.updates.forEach(function(item) {
                 if (item.stokAkhir !== undefined) {
-                  nextDaySheet.getRange(item.row, 4).setValue(item.stokAkhir); // Kolom D = Stok Awal T+1
+                  if (isGudangSync) {
+                    nextDaySheet.getRange(item.row, 2).setValue(item.stokAkhir); // Kolom B = Stok Awal T+1 Gudang
+                  } else {
+                    nextDaySheet.getRange(item.row, 4).setValue(item.stokAkhir); // Kolom D = Stok Awal T+1 Konter
+                  }
                 }
               });
               // Log to admin log sheet
@@ -1309,7 +1397,7 @@ function batchUpdateStok(params) {
     }
 
     return {
-      message: "Data berhasil disimpan secara massal",
+      message: "Data berhasil disimpan",
       syncInfo: syncInfo
     };
   } catch (e) { throw new Error(e.toString()); }
