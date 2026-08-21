@@ -258,7 +258,7 @@ const DataStok = ({ addToast }) => {
 
   // Fungsi helper untuk merender tabel berdasarkan tab
   const renderTableContent = () => {
-    if (loading) {
+    if (loading || konterOptions.length === 0) {
       return (
         <div className="w-full animate-pulse p-4">
           <div className="h-8 bg-slate-200 rounded w-full mb-4"></div>
