@@ -16,8 +16,7 @@ export default function LaporanBulanan({ addToast }) {
   
   // State for Bon & Gaji
   const [filterBulan, setFilterBulan] = useState(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    return new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 7);
   });
   const [gajiData, setGajiData] = useState(null);
   const [loadingGaji, setLoadingGaji] = useState(false);
@@ -637,6 +636,7 @@ export default function LaporanBulanan({ addToast }) {
                 type="month" 
                 className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition"
                 value={filterBulan}
+                max={new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 7)}
                 onChange={(e) => setFilterBulan(e.target.value)}
               />
               {loadingGaji && <div className="flex items-center gap-2 text-primary text-sm font-medium"><Loader2 className="w-4 h-4 animate-spin" /> Memuat...</div>}

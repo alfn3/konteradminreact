@@ -34,8 +34,7 @@ function getColor(name) {
 
 export default function LogAktivitas({ addToast }) {
   const [tanggal, setTanggal] = useState(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
+    return new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
   });
   
   const [loading, setLoading] = useState(false);
@@ -114,6 +113,7 @@ export default function LogAktivitas({ addToast }) {
               <input 
                 type="date" 
                 value={tanggal}
+                max={new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]}
                 onChange={(e) => setTanggal(e.target.value)}
                 className="text-xs text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 outline-none cursor-pointer"
               />

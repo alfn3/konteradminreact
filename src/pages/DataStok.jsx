@@ -156,8 +156,11 @@ const DataStok = ({ addToast }) => {
   }, [toko, tanggal]);
 
   const handleStokChange = (item, field, value) => {
-    // Hanya allow edit topup dan stokAkhir
-    if (field === 'stokAwal') return;
+    if (currentBase === 'STOK GUDANG') {
+      if (field === 'stokAkhir') return;
+    } else {
+      if (field === 'stokAwal') return;
+    }
     const realRow = item.realRow;
     setModifiedStok(prev => {
       const tabName = activeTab === 'acc' ? 'Aksesoris' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1);
@@ -166,6 +169,7 @@ const DataStok = ({ addToast }) => {
         kategori: tabName,
         produk: `${item.provider || ''}:${item.nama || ''}`.replace(/^:|:$/g, ''),
         topup: item.topup,
+        stokAwal: item.stokAwal,
         stokAkhir: item.stokAkhir
       };
       return {
@@ -208,8 +212,12 @@ const DataStok = ({ addToast }) => {
         kategori: item.kategori,
         produk: item.produk,
         topup: item.topup === '' ? '' : item.topup,
-        stokAkhir: item.stokAkhir === '' ? '' : item.stokAkhir
       };
+      if (currentBase === 'STOK GUDANG') {
+        if (item.stokAwal !== undefined) payload.stokAwal = item.stokAwal === '' ? '' : item.stokAwal;
+      } else {
+        if (item.stokAkhir !== undefined) payload.stokAkhir = item.stokAkhir === '' ? '' : item.stokAkhir;
+      }
       if (item.harga !== undefined) payload.hj = item.harga === '' ? '' : item.harga;
       if (item.hpp !== undefined) payload.hpp = item.hpp === '' ? '' : item.hpp;
       return payload;
@@ -483,9 +491,13 @@ const DataStok = ({ addToast }) => {
                     <td className="px-4 py-3 font-medium text-slate-800">{item.nama}</td>
                     <td className="px-2 py-3">
                       <div className="flex items-center justify-center">
-                        <div className="flex items-center justify-center p-1.5 rounded text-slate-600 font-medium w-16 h-9">
-                          {awalVal === "0" || awalVal === 0 ? "" : awalVal}
-                        </div>
+                        {currentBase === 'STOK GUDANG' ? (
+                          renderEditableCell('stokAwal', awalVal, '')
+                        ) : (
+                          <div className="flex items-center justify-center p-1.5 rounded text-slate-600 font-medium w-16 h-9">
+                            {awalVal === "0" || awalVal === 0 ? "" : awalVal}
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-2 py-3">
@@ -495,7 +507,13 @@ const DataStok = ({ addToast }) => {
                     </td>
                     <td className="px-2 py-3">
                       <div className="flex items-center justify-center">
-                        {renderEditableCell('stokAkhir', akhirVal, '')}
+                        {currentBase === 'STOK GUDANG' ? (
+                          <div className="flex items-center justify-center p-1.5 rounded text-slate-600 font-medium w-16 h-9">
+                            {akhirVal === "0" || akhirVal === 0 ? "" : akhirVal}
+                          </div>
+                        ) : (
+                          renderEditableCell('stokAkhir', akhirVal, '')
+                        )}
                       </div>
                     </td>
                     
@@ -959,7 +977,11 @@ const DataStok = ({ addToast }) => {
         <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="mt-0.5 flex-shrink-0">
           <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        <span>Stok awal dikunci. Otomatis mengikuti stok akhir shift sebelumnya. Silakan edit stok akhir shift sebelumnya.</span>
+        <span>
+          {currentBase === 'STOK GUDANG' 
+            ? "Stok Akhir dikunci (Otomatis dari Stok Awal + Masuk). Silakan edit Stok Awal secara manual." 
+            : "Stok Awal dikunci (Otomatis dari Stok Akhir hari sebelumnya). Silakan edit Stok Akhir shift sebelumnya."}
+        </span>
       </div>
 
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-3 border-b border-slate-100">

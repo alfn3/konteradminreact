@@ -1114,6 +1114,9 @@ function batchUpdateStok(params) {
           if (item.topup !== undefined) {
             sheet.getRange(item.row, 3).setValue(item.topup);    // Kolom C = Topup Gudang
           }
+          if (item.stokAwal !== undefined) {
+            sheet.getRange(item.row, 2).setValue(item.stokAwal); // Kolom B = Stok Awal Gudang
+          }
           if (item.stokAkhir !== undefined) {
             sheet.getRange(item.row, 10).setValue(item.stokAkhir); // Kolom J = Stok Akhir Gudang
           }
@@ -1149,7 +1152,7 @@ function batchUpdateStok(params) {
     const todayForSync = new Date();
     const todaySyncStr = todayForSync.getFullYear() + '-' + String(todayForSync.getMonth()+1).padStart(2,'0') + '-' + String(todayForSync.getDate()).padStart(2,'0');
 
-    if (params.updates && Array.isArray(params.updates) && params.updates.length > 0 && params.tanggal && params.tanggal !== todaySyncStr) {
+    if (!isGudang && params.updates && Array.isArray(params.updates) && params.updates.length > 0 && params.tanggal && params.tanggal !== todaySyncStr) {
       try {
         var tokoName = params.toko || '';
         var tokoLower = tokoName.toLowerCase();

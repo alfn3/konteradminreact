@@ -22,7 +22,7 @@ export default function KeuanganKas({ addToast }) {
   
   // Filter Harian untuk Tab 1 & Tab 2
   const [filterTanggal, setFilterTanggal] = useState(
-    new Date().toISOString().slice(0, 10) // Default hari ini YYYY-MM-DD
+    new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10)
   );
   const [filterKonter, setFilterKonter] = useState('Semua');
 
@@ -32,7 +32,7 @@ export default function KeuanganKas({ addToast }) {
   const [showModal, setShowModal] = useState(false);
   const [editKasId, setEditKasId] = useState(null);
   const [formData, setFormData] = useState({
-    tanggal: new Date().toISOString().slice(0, 10),
+    tanggal: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10),
     tipe: 'Pemasukan',
     nominal: '',
     keterangan: ''
@@ -734,6 +734,7 @@ export default function KeuanganKas({ addToast }) {
             <input 
               type={activeTab === 'manajemen' ? 'month' : 'date'}
               value={filterTanggal}
+              max={activeTab === 'manajemen' ? new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 7) : new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10)}
               onChange={(e) => setFilterTanggal(e.target.value)}
               className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm transition-all"
             />
@@ -741,7 +742,10 @@ export default function KeuanganKas({ addToast }) {
           {/* Buttons */}
           <div className="flex gap-2 w-full sm:w-auto">
              <button 
-               onClick={() => setActiveTab('rincian')}
+               onClick={() => {
+                 setActiveTab('rincian');
+                 setFilterTanggal(new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10));
+               }}
                className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 flex justify-center items-center shadow-sm ${activeTab === 'rincian' ? 'bg-indigo-600 text-white ring-2 ring-indigo-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
              >
                <Activity className="w-4 h-4 mr-2" /> Setoran Sistem
@@ -749,7 +753,7 @@ export default function KeuanganKas({ addToast }) {
              <button 
                onClick={() => {
                   setActiveTab('manajemen');
-                  setFilterTanggal(new Date().toISOString().slice(0, 7)); 
+                  setFilterTanggal(new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 7)); 
                }}
                className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 flex justify-center items-center shadow-sm ${activeTab === 'manajemen' ? 'bg-indigo-600 text-white ring-2 ring-indigo-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
              >
