@@ -1108,6 +1108,14 @@ function batchUpdateStok(params) {
 
     const isGudang = params.toko.toLowerCase() === "stok gudang";
 
+    let idStok = params.idStok || null;
+    if (params.isRestok && !idStok) {
+      idStok = "RST-" + new Date().getTime();
+    }
+    
+    // Siapkan array untuk histori restok
+    const historiToAppend = [];
+
     if (params.updates && Array.isArray(params.updates)) {
       params.updates.forEach(item => {
         if (isGudang) {
@@ -1140,8 +1148,92 @@ function batchUpdateStok(params) {
             sheet.getRange(item.row, 13).setValue(item.hpp); // Kolom M = HPP Konter
           }
         }
+        
+        if (params.isRestok) {
+          historiToAppend.push({
+            nama: item.produk || item.nama || item.kategori + ' (Baris ' + item.row + ')',
+            topup: item.topup,
+            hpp: item.hpp
+          });
+        }
       });
       totalChanges += params.updates.length;
+      
+      // Simpan ke histori restok jika ini adalah transaksi restok
+      if (params.isRestok && historiToAppend.length > 0) {
+        try {
+          const ssAdmin = SpreadsheetApp.openById(FILES.ADMIN);
+          let sheetHistori = ssAdmin.getSheetByName("histori_restok");
+          if (!sheetHistori) {
+            sheetHistori = ssAdmin.insertSheet("histori_restok");
+            sheetHistori.appendRow(["ID Stok", "Timestamp", "Tanggal", "Toko", "Produk", "Masuk", "HPP"]);
+            sheetHistori.getRange("A1:G1").setFontWeight("bold");
+          }
+          
+          let historyTimestamp = Utilities.formatDate(new Date(), "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss");
+          
+          // Jika edit histori (params.idStok ada), hapus baris lama dan pertahankan timestamp aslinya
+          if (params.idStok) {
+            const data = sheetHistori.getDataRange().getValues();
+            const rowsToDelete = [];
+            for (let i = 1; i < data.length; i++) {
+              if (data[i][0] === params.idStok) {
+                rowsToDelete.push(i + 1); // 1-based index
+              }
+            }
+            if (rowsToDelete.length > 0) {
+               const origDate = data[rowsToDelete[0] - 1][1];
+               historyTimestamp = (origDate instanceof Date) 
+                  ? Utilities.formatDate(origDate, "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss") 
+                  : origDate;
+            }
+            // Hapus dari bawah ke atas agar index tidak bergeser
+            for (let i = rowsToDelete.length - 1; i >= 0; i--) {
+              sheetHistori.deleteRow(rowsToDelete[i]);
+            }
+          }
+
+          const rowsToAppend = historiToAppend.map(item => [
+            idStok,
+            historyTimestamp,
+            "'" + params.tanggal, // Paksa string agar tidak terconvert jadi Date
+            params.toko,
+            item.nama,
+            item.topup || 0,
+            item.hpp || 0
+          ]);
+          sheetHistori.getRange(sheetHistori.getLastRow() + 1, 1, rowsToAppend.length, 7).setValues(rowsToAppend);
+          
+          // ENFORCE: Master HPP selalu mengikuti Histori yang paling TERBARU (chronological)
+          const finalData = sheetHistori.getDataRange().getValues();
+          params.updates.forEach(item => {
+             if (item.hpp !== undefined && item.hpp !== "") {
+                 const prodName = item.produk || item.nama || item.kategori + ' (Baris ' + item.row + ')';
+                 let latestHpp = item.hpp;
+                 let maxTime = 0;
+                 for (let i = 1; i < finalData.length; i++) {
+                     if (finalData[i][4] === prodName && String(finalData[i][3]).toLowerCase() === params.toko.toLowerCase()) {
+                         const rawTs = finalData[i][1];
+                         // rawTs bisa string atau Date
+                         const timeMs = (rawTs instanceof Date) ? rawTs.getTime() : new Date(rawTs.replace(/-/g, '/')).getTime();
+                         
+                         if (!isNaN(timeMs) && timeMs >= maxTime) {
+                             maxTime = timeMs;
+                             latestHpp = finalData[i][6]; // Ambil HPP
+                         }
+                     }
+                 }
+                 // Timpa HPP di master sheet dengan HPP dari histori yang paling baru
+                 if (maxTime > 0) {
+                     sheet.getRange(item.row, 13).setValue(latestHpp);
+                 }
+             }
+          });
+
+        } catch (e) {
+          console.error("Gagal menyimpan histori restok:", e);
+        }
+      }
     }
 
     // -----------------------------------------------
@@ -1898,6 +1990,7 @@ function doPost(e) {
     else if (action === 'getDataValidasi') result = getDataValidasi();
     else if (action === 'checkLogin') result = checkLogin(args[0]);
     else if (action === 'getDataStok') result = getDataStok(args[0]);
+    else if (action === 'getHistoriRestok') result = getHistoriRestok(args[0], args[1]);
     else if (action === 'batchUpdateStok') result = batchUpdateStok(args[0]);
     else if (action === 'getDataKonterList') result = getDataKonterList();
     else if (action === 'tambahKonterList') result = tambahKonterList(args[0]);
@@ -2273,6 +2366,60 @@ function getLogDashboard() {
     const data = sheet.getRange(startRow, 1, numRows, 8).getDisplayValues();
     return data.reverse();
   } catch (e) {
+    return [];
+  }
+}
+
+// FUNGSI LAINNYA
+function getHistoriRestok(tanggal, toko) {
+  try {
+    const ssAdmin = SpreadsheetApp.openById(FILES.ADMIN);
+    const sheetHistori = ssAdmin.getSheetByName("histori_restok");
+    if (!sheetHistori) return [];
+    
+    const data = sheetHistori.getDataRange().getValues();
+    if (data.length <= 1) return []; // Cuma header
+    
+    // Headers: [ID Stok, Timestamp, Tanggal, Toko, Produk, Masuk, HPP]
+    const histori = [];
+    for (let i = 1; i < data.length; i++) {
+      let rowDate = data[i][2];
+      if (rowDate instanceof Date) {
+        rowDate = Utilities.formatDate(rowDate, "Asia/Jakarta", "yyyy-MM-dd");
+      } else {
+        rowDate = String(rowDate).trim();
+      }
+      
+      let rowToko = String(data[i][3]).trim();
+
+      if (rowDate === tanggal && rowToko.toLowerCase() === toko.toLowerCase()) {
+        histori.push({
+          idStok: data[i][0],
+          timestamp: data[i][1],
+          tanggal: rowDate,
+          toko: rowToko,
+          produk: data[i][4],
+          topup: data[i][5],
+          hpp: data[i][6]
+        });
+      }
+    }
+    
+    // Group by ID Stok
+    const grouped = {};
+    histori.forEach(item => {
+      if (!grouped[item.idStok]) {
+        grouped[item.idStok] = {
+          idStok: item.idStok,
+          timestamp: item.timestamp,
+          items: []
+        };
+      }
+      grouped[item.idStok].items.push(item);
+    });
+    
+    return Object.values(grouped).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  } catch(e) {
     return [];
   }
 }

@@ -37,17 +37,19 @@ const getProviderBadge = (providerName) => {
   return colors[Math.abs(hash) % colors.length] + ' font-bold';
 };
 
-const RestokCurrencyInput = ({ value, onChange, className }) => {
+const RestokCurrencyInput = ({ value, onChange, className, id, onKeyDown }) => {
   const [isFocused, setIsFocused] = useState(false);
   const numVal = Number(String(value).replace(/[^0-9]/g, '')) || 0;
-  
+
   return (
     <input
+      id={id}
       type={isFocused ? "number" : "text"}
       value={isFocused ? (numVal || '') : (numVal ? `Rp ${numVal.toLocaleString('id-ID')}` : '')}
       onFocus={() => setIsFocused(true)}
       onBlur={() => setIsFocused(false)}
       onChange={(e) => onChange(e.target.value)}
+      onKeyDown={onKeyDown}
       className={className}
       placeholder=""
     />
@@ -66,6 +68,8 @@ const DataStok = ({ addToast }) => {
 
   const [loading, setLoading] = useState(false);
   const [stokData, setStokData] = useState(null);
+  const [historiRestok, setHistoriRestok] = useState([]);
+  const [selectedIdStok, setSelectedIdStok] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
   const [modifiedStok, setModifiedStok] = useState({});
@@ -113,6 +117,15 @@ const DataStok = ({ addToast }) => {
     }
   };
 
+  const fetchHistoriRestok = async () => {
+    try {
+      const res = await gasService.call('getHistoriRestok', tanggal, toko);
+      if (Array.isArray(res)) setHistoriRestok(res);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const fetchKonterOptions = async () => {
     try {
       const res = await gasService.call('getDataKonterList');
@@ -152,7 +165,11 @@ const DataStok = ({ addToast }) => {
     setModifiedPengeluaran({});
     setModifiedUang({});
     setModifiedElektrik({});
+    setSelectedIdStok('');
     fetchStok();
+    if (toko.toLowerCase() === 'stok gudang') {
+      fetchHistoriRestok();
+    }
   }, [toko, tanggal]);
 
   const handleStokChange = (item, field, value) => {
@@ -218,8 +235,18 @@ const DataStok = ({ addToast }) => {
       } else {
         if (item.stokAkhir !== undefined) payload.stokAkhir = item.stokAkhir === '' ? '' : item.stokAkhir;
       }
-      if (item.harga !== undefined) payload.hj = item.harga === '' ? '' : item.harga;
-      if (item.hpp !== undefined) payload.hpp = item.hpp === '' ? '' : item.hpp;
+      const originalItem = ([]).concat(stokData?.perdana || [], stokData?.voucher || [], stokData?.acc || []).find(x => x.realRow === item.row);
+
+      if (item.harga !== undefined) {
+        payload.hj = item.harga === '' ? '' : item.harga;
+      }
+
+      if (item.hpp !== undefined) {
+        payload.hpp = item.hpp === '' ? '' : item.hpp;
+      } else if (showRestokModal && originalItem) {
+        payload.hpp = Number(String(originalItem.hpp || '0').replace(/[^0-9]/g, ''));
+      }
+
       return payload;
     });
     const updatesPengeluaran = Object.values(modifiedPengeluaran);
@@ -231,14 +258,21 @@ const DataStok = ({ addToast }) => {
 
     setIsSaving(true);
     try {
-      const res = await gasService.call('batchUpdateStok', { toko, tanggal, updates, updatesPengeluaran, updatesUang, updatesElektrik });
+      const payload = { toko, tanggal, updates, updatesPengeluaran, updatesUang, updatesElektrik };
+      if (showRestokModal) {
+        payload.isRestok = true;
+        payload.idStok = selectedIdStok;
+      }
+      const res = await gasService.call('batchUpdateStok', payload);
       if (res.error) throw new Error(res.message);
       // Sukses
       setModifiedStok({});
       setModifiedPengeluaran({});
       setModifiedUang({});
       setModifiedElektrik({});
+      setSelectedIdStok('');
       fetchStok(); // Refresh data
+      if (toko.toLowerCase() === 'stok gudang') fetchHistoriRestok();
 
       if (addToast) {
         addToast(res.message || "Data berhasil disimpan!", "success");
@@ -253,6 +287,26 @@ const DataStok = ({ addToast }) => {
       else alert("Gagal menyimpan data: " + err.message);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleRestokKeyDown = (e, type, idx) => {
+    if (['ArrowUp', 'ArrowDown'].includes(e.key)) {
+      e.preventDefault();
+    }
+
+    if (e.key === 'ArrowUp') {
+      const prev = document.getElementById(`restok-${type}-${idx - 1}`);
+      if (prev) { prev.focus(); prev.select(); }
+    } else if (e.key === 'ArrowDown' || e.key === 'Enter') {
+      const next = document.getElementById(`restok-${type}-${idx + 1}`);
+      if (next) { next.focus(); next.select(); }
+    } else if (e.key === 'ArrowRight' && type === 'topup') {
+      const hpp = document.getElementById(`restok-hpp-${idx}`);
+      if (hpp) { hpp.focus(); hpp.select(); }
+    } else if (e.key === 'ArrowLeft' && type === 'hpp') {
+      const topup = document.getElementById(`restok-topup-${idx}`);
+      if (topup) { topup.focus(); topup.select(); }
     }
   };
 
@@ -377,7 +431,7 @@ const DataStok = ({ addToast }) => {
                           value={modifiedStok[item.realRow]?.[field] ?? (numVal === 0 ? "" : numVal)}
                           onChange={(e) => handleStokChange(item, field, e.target.value)}
                           onKeyDown={(e) => {
-                             if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
+                            if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
                           }}
                         />
                       </div>
@@ -386,18 +440,18 @@ const DataStok = ({ addToast }) => {
 
                   let textColor = "text-slate-800";
                   let extraInfo = null;
-                  
+
                   if (field === 'harga') {
-                      const hppRaw = modifiedStok[item.realRow]?.hpp ?? item.hpp;
-                      const hppNum = Number(String(hppRaw || '0').replace(/[^0-9]/g, '')) || 0;
-                      if (numVal < hppNum) textColor = "text-red-600";
-                      
-                      const marginNum = numVal - hppNum;
-                      extraInfo = (
-                        <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 rounded whitespace-nowrap mt-0.5">
-                          Margin: Rp {marginNum.toLocaleString('id-ID')}
-                        </span>
-                      );
+                    const hppRaw = modifiedStok[item.realRow]?.hpp ?? item.hpp;
+                    const hppNum = Number(String(hppRaw || '0').replace(/[^0-9]/g, '')) || 0;
+                    if (numVal < hppNum) textColor = "text-red-600";
+
+                    const marginNum = numVal - hppNum;
+                    extraInfo = (
+                      <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 rounded whitespace-nowrap mt-0.5">
+                        Margin: Rp {marginNum.toLocaleString('id-ID')}
+                      </span>
+                    );
                   }
 
                   return (
@@ -432,7 +486,7 @@ const DataStok = ({ addToast }) => {
                             const isDown = e.key === 'ArrowDown' || e.key === 'Enter';
                             const isLeft = e.key === 'ArrowLeft';
                             const isRight = e.key === 'ArrowRight';
-                            
+
                             if (isUp || isDown || isLeft || isRight) {
                               const currentIndex = arr.findIndex(x => x.realRow === item.realRow);
                               if (isUp || isDown) {
@@ -502,7 +556,13 @@ const DataStok = ({ addToast }) => {
                     </td>
                     <td className="px-2 py-3">
                       <div className="flex items-center justify-center">
-                        {renderEditableCell('topup', topupVal, (topupVal && Number(topupVal) > 0) ? 'text-emerald-600 font-bold' : '')}
+                        {currentBase === 'STOK GUDANG' ? (
+                          <div className="flex items-center justify-center p-1.5 rounded text-emerald-600 font-bold w-16 h-9">
+                            {topupVal === "0" || topupVal === 0 ? "" : topupVal}
+                          </div>
+                        ) : (
+                          renderEditableCell('topup', topupVal, (topupVal && Number(topupVal) > 0) ? 'text-emerald-600 font-bold' : '')
+                        )}
                       </div>
                     </td>
                     <td className="px-2 py-3">
@@ -516,7 +576,7 @@ const DataStok = ({ addToast }) => {
                         )}
                       </div>
                     </td>
-                    
+
                     {currentBase === 'STOK GUDANG' && (
                       <td className="px-4 py-3 text-right text-slate-500 align-top">
                         {renderEditableCurrency('hpp', mod?.hpp ?? item.hpp)}
@@ -573,39 +633,39 @@ const DataStok = ({ addToast }) => {
                 value={editValue}
                 onChange={(e) => handlePengeluaranChange(item, field, e.target.value)}
                 onKeyDown={(e) => {
-                    const isUp = e.key === 'ArrowUp';
-                    const isDown = e.key === 'ArrowDown' || e.key === 'Enter';
-                    const isLeft = e.key === 'ArrowLeft';
-                    const isRight = e.key === 'ArrowRight';
-                    
-                    if (isUp || isDown || isLeft || isRight) {
-                      const arrPeng = stokData.pengeluaran?.filter(i => {
-                        if (!hideEmpty) return true;
-                        if (editingCell?.row === i.row) return true;
-                        const mod = modifiedPengeluaran[i.row];
-                        const nom = Number(mod?.nominal ?? i.nominal) || 0;
-                        const ket = ((mod?.keterangan ?? i.keterangan) || '').toString().trim();
-                        return nom !== 0 || (ket !== '' && ket !== '-');
-                      }) || [];
-                      const currentIndex = arrPeng.findIndex(x => x.row === item.row);
-                      
-                      if (isUp || isDown) {
+                  const isUp = e.key === 'ArrowUp';
+                  const isDown = e.key === 'ArrowDown' || e.key === 'Enter';
+                  const isLeft = e.key === 'ArrowLeft';
+                  const isRight = e.key === 'ArrowRight';
+
+                  if (isUp || isDown || isLeft || isRight) {
+                    const arrPeng = stokData.pengeluaran?.filter(i => {
+                      if (!hideEmpty) return true;
+                      if (editingCell?.row === i.row) return true;
+                      const mod = modifiedPengeluaran[i.row];
+                      const nom = Number(mod?.nominal ?? i.nominal) || 0;
+                      const ket = ((mod?.keterangan ?? i.keterangan) || '').toString().trim();
+                      return nom !== 0 || (ket !== '' && ket !== '-');
+                    }) || [];
+                    const currentIndex = arrPeng.findIndex(x => x.row === item.row);
+
+                    if (isUp || isDown) {
+                      e.preventDefault(); e.target.blur();
+                      const dir = isUp ? -1 : 1;
+                      if (currentIndex + dir >= 0 && currentIndex + dir < arrPeng.length) {
+                        setTimeout(() => setEditingCell({ row: arrPeng[currentIndex + dir].row, field }), 10);
+                      }
+                    } else if (isLeft || isRight) {
+                      if (isLeft && field === 'keterangan') {
                         e.preventDefault(); e.target.blur();
-                        const dir = isUp ? -1 : 1;
-                        if (currentIndex + dir >= 0 && currentIndex + dir < arrPeng.length) {
-                          setTimeout(() => setEditingCell({ row: arrPeng[currentIndex + dir].row, field }), 10);
-                        }
-                      } else if (isLeft || isRight) {
-                        if (isLeft && field === 'keterangan') {
-                          e.preventDefault(); e.target.blur();
-                          setTimeout(() => setEditingCell({ row: item.row, field: 'nominal' }), 10);
-                        } else if (isRight && field === 'nominal') {
-                          e.preventDefault(); e.target.blur();
-                          setTimeout(() => setEditingCell({ row: item.row, field: 'keterangan' }), 10);
-                        }
+                        setTimeout(() => setEditingCell({ row: item.row, field: 'nominal' }), 10);
+                      } else if (isRight && field === 'nominal') {
+                        e.preventDefault(); e.target.blur();
+                        setTimeout(() => setEditingCell({ row: item.row, field: 'keterangan' }), 10);
                       }
                     }
-                  }}
+                  }
+                }}
               />
             </div>
           );
@@ -684,32 +744,32 @@ const DataStok = ({ addToast }) => {
                 value={editValue}
                 onChange={(e) => handleElektrikChange(item, field, e.target.value)}
                 onKeyDown={(e) => {
-                    const isUp = e.key === 'ArrowUp';
-                    const isDown = e.key === 'ArrowDown' || e.key === 'Enter';
-                    const isLeft = e.key === 'ArrowLeft';
-                    const isRight = e.key === 'ArrowRight';
-                    
-                    if (isUp || isDown || isLeft || isRight) {
-                      const arrElektrik = stokData.elektrik || [];
-                      const currentIndex = arrElektrik.findIndex(x => x.realRow === item.realRow);
-                      
-                      if (isUp || isDown) {
+                  const isUp = e.key === 'ArrowUp';
+                  const isDown = e.key === 'ArrowDown' || e.key === 'Enter';
+                  const isLeft = e.key === 'ArrowLeft';
+                  const isRight = e.key === 'ArrowRight';
+
+                  if (isUp || isDown || isLeft || isRight) {
+                    const arrElektrik = stokData.elektrik || [];
+                    const currentIndex = arrElektrik.findIndex(x => x.realRow === item.realRow);
+
+                    if (isUp || isDown) {
+                      e.preventDefault(); e.target.blur();
+                      const dir = isUp ? -1 : 1;
+                      if (currentIndex + dir >= 0 && currentIndex + dir < arrElektrik.length) {
+                        setTimeout(() => setEditingCell({ row: arrElektrik[currentIndex + dir].realRow, field }), 10);
+                      }
+                    } else if (isLeft || isRight) {
+                      const fields = ['saldoAwal', 'topup', 'saldoAkhir'];
+                      const fIdx = fields.indexOf(field);
+                      const newFIdx = fIdx + (isLeft ? -1 : 1);
+                      if (newFIdx >= 0 && newFIdx < fields.length) {
                         e.preventDefault(); e.target.blur();
-                        const dir = isUp ? -1 : 1;
-                        if (currentIndex + dir >= 0 && currentIndex + dir < arrElektrik.length) {
-                          setTimeout(() => setEditingCell({ row: arrElektrik[currentIndex + dir].realRow, field }), 10);
-                        }
-                      } else if (isLeft || isRight) {
-                        const fields = ['saldoAwal', 'topup', 'saldoAkhir'];
-                        const fIdx = fields.indexOf(field);
-                        const newFIdx = fIdx + (isLeft ? -1 : 1);
-                        if (newFIdx >= 0 && newFIdx < fields.length) {
-                          e.preventDefault(); e.target.blur();
-                          setTimeout(() => setEditingCell({ row: item.realRow, field: fields[newFIdx] }), 10);
-                        }
+                        setTimeout(() => setEditingCell({ row: item.realRow, field: fields[newFIdx] }), 10);
                       }
                     }
-                  }}
+                  }
+                }}
               />
             </div>
           );
@@ -785,18 +845,18 @@ const DataStok = ({ addToast }) => {
                 value={modifiedUang[item.row]?.list ?? (item.list || '')}
                 onChange={(e) => handleUangChange(item, e.target.value)}
                 onKeyDown={(e) => {
-                    const isUp = e.key === 'ArrowUp';
-                    const isDown = e.key === 'ArrowDown' || e.key === 'Enter';
-                    if (isUp || isDown) {
-                      e.preventDefault(); e.target.blur();
-                      const arrUang = stokData.uang || [];
-                      const currentIndex = arrUang.findIndex(x => x.row === item.row);
-                      const dir = isUp ? -1 : 1;
-                      if (currentIndex + dir >= 0 && currentIndex + dir < arrUang.length) {
-                        setTimeout(() => setEditingCell({ row: arrUang[currentIndex + dir].row, field: 'list' }), 10);
-                      }
+                  const isUp = e.key === 'ArrowUp';
+                  const isDown = e.key === 'ArrowDown' || e.key === 'Enter';
+                  if (isUp || isDown) {
+                    e.preventDefault(); e.target.blur();
+                    const arrUang = stokData.uang || [];
+                    const currentIndex = arrUang.findIndex(x => x.row === item.row);
+                    const dir = isUp ? -1 : 1;
+                    if (currentIndex + dir >= 0 && currentIndex + dir < arrUang.length) {
+                      setTimeout(() => setEditingCell({ row: arrUang[currentIndex + dir].row, field: 'list' }), 10);
                     }
-                  }}
+                  }
+                }}
               />
             </div>
           );
@@ -858,7 +918,7 @@ const DataStok = ({ addToast }) => {
   };
 
   const baseBases = Array.from(new Set(konterOptions.map(opt => parseKonterLabel(opt.label).base)));
-  
+
   const currentOpt = konterOptions.find(o => o.value === toko);
   const currentLabel = currentOpt ? currentOpt.label : (toko === 'stok gudang' ? 'STOK GUDANG' : '');
   const { base: currentBase, shift: currentShift } = parseKonterLabel(currentLabel);
@@ -888,7 +948,7 @@ const DataStok = ({ addToast }) => {
   };
   // -----------------------------
 
-  const availableTabs = currentBase === 'STOK GUDANG' 
+  const availableTabs = currentBase === 'STOK GUDANG'
     ? tabs.filter(t => !['pengeluaran', 'uang', 'elektrik'].includes(t.id))
     : tabs;
 
@@ -928,7 +988,7 @@ const DataStok = ({ addToast }) => {
               ))}
               <option value="STOK GUDANG" className="bg-white text-emerald-600 font-bold bg-emerald-50">STOK GUDANG</option>
             </select>
-            
+
             {/* Shift Switcher (Only show if not STOK GUDANG) */}
             {currentBase !== 'STOK GUDANG' && (
               <div className="flex bg-slate-100 p-1 rounded-lg">
@@ -955,11 +1015,6 @@ const DataStok = ({ addToast }) => {
             {isEditMode ? 'Mode Edit Aktif' : 'Buka Edit'}
           </button>
 
-          {currentBase === 'STOK GUDANG' && (
-            <button onClick={() => { setShowRestokModal(true); setRestokSearch(''); setRestokSelected(null); setRestokQty(''); }} className="hidden">
-            </button>
-          )}
-
           <button onClick={() => setHideEmpty(!hideEmpty)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">
             {hideEmpty ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
             {hideEmpty ? 'Tampilkan Kosong' : 'Sembunyikan Kosong'}
@@ -978,8 +1033,8 @@ const DataStok = ({ addToast }) => {
           <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <span>
-          {currentBase === 'STOK GUDANG' 
-            ? "Stok Akhir dikunci (Otomatis dari Stok Awal + Masuk). Silakan edit Stok Awal secara manual." 
+          {currentBase === 'STOK GUDANG'
+            ? "Stok Akhir dikunci (Otomatis dari Stok Awal + Masuk). Silakan edit Stok Awal secara manual."
             : "Stok Awal dikunci (Otomatis dari Stok Akhir hari sebelumnya). Silakan edit Stok Akhir shift sebelumnya."}
         </span>
       </div>
@@ -1002,9 +1057,9 @@ const DataStok = ({ addToast }) => {
             ))}
           </div>
 
-          {currentBase === 'STOK GUDANG' && (
-            <button 
-              onClick={() => { setShowRestokModal(true); setRestokSearch(''); setRestokSelected(null); setRestokQty(''); }} 
+          {currentBase === 'STOK GUDANG' && !loading && stokData && (
+            <button
+              onClick={() => setShowRestokModal(true)}
               className="ml-2 flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-sm border border-emerald-700"
             >
               <Package className="w-4 h-4" />
@@ -1073,43 +1128,114 @@ const DataStok = ({ addToast }) => {
       {showRestokModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-5xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[90vh]">
-            
+
             {/* KIRI: Daftar Produk */}
             <div className="flex-1 flex flex-col h-full border-r border-slate-200 bg-slate-50/50">
               <div className="p-4 border-b border-slate-200 bg-white flex items-center justify-between">
-                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                  <Package className="w-5 h-5 text-emerald-600" />
-                  Restok Gudang
-                </h3>
-                <button onClick={() => setShowRestokModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors md:hidden">
-                  <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              
-              <div className="p-4 flex-1 flex flex-col overflow-hidden">
-                <div className="flex gap-2 mb-4 shrink-0">
-                  {['perdana', 'voucher', 'acc'].map(cat => {
-                    const isActive = restokTab === cat;
-                    let colorClass = 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700';
-                    if (isActive) {
-                      if (cat === 'perdana') colorClass = 'bg-blue-50 border-blue-500 text-blue-700';
-                      else if (cat === 'voucher') colorClass = 'bg-orange-50 border-orange-500 text-orange-700';
-                      else colorClass = 'bg-purple-50 border-purple-500 text-purple-700';
-                    }
-                    return (
-                      <button 
-                        key={cat}
-                        onClick={() => setRestokTab(cat)}
-                        className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm border ${colorClass}`}
-                      >
-                        {cat === 'acc' ? 'Aksesoris' : cat.charAt(0).toUpperCase() + cat.slice(1)}
-                      </button>
-                    );
-                  })}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <Package className="w-5 h-5 text-emerald-600" />
+                    Restok Gudang
+                  </h3>
+
+                  <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
+                    <select
+                      value={selectedIdStok}
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        setSelectedIdStok(id);
+                        if (!id) {
+                          setModifiedStok({});
+                        } else {
+                          const historyItem = historiRestok.find(h => h.idStok === id);
+                          if (historyItem) {
+                            const newModified = {};
+                            historyItem.items.forEach(hi => {
+                              for (const cat in stokData) {
+                                if (Array.isArray(stokData[cat])) {
+                                  const prod = stokData[cat].find(p => {
+                                    const prodName = `${p.provider || ''}:${p.nama || ''}`.replace(/^:|:$/g, '');
+                                    let matchedByRow = false;
+                                    const match = hi.produk.match(/\(Baris (\d+)\)/);
+                                    if (match && parseInt(match[1], 10) === p.realRow) {
+                                      matchedByRow = true;
+                                    }
+                                    return p.nama === hi.produk || prodName === hi.produk || matchedByRow;
+                                  });
+                                  if (prod) {
+                                    newModified[prod.realRow] = {
+                                      row: prod.realRow,
+                                      kategori: cat,
+                                      produk: hi.produk,
+                                      topup: hi.topup,
+                                      hpp: hi.hpp
+                                    };
+                                  }
+                                }
+                              }
+                            });
+                            setModifiedStok(newModified);
+                          }
+                        }
+                      }}
+                      className="text-xs font-sans font-semibold border border-slate-300 rounded-lg px-2 py-1.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none w-[180px] bg-slate-50 cursor-pointer shadow-sm hover:bg-slate-100 transition-colors"
+                    >
+                      <option value="">-- Restok Baru --</option>
+                      {historiRestok.length === 0 ? (
+                        <option value="" disabled>Belum ada histori</option>
+                      ) : (
+                        historiRestok.map((h, i) => (
+                          <option key={h.idStok} value={h.idStok}>
+                            {h.timestamp.includes('T')
+                              ? new Date(h.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+                              : (h.timestamp.split(' ')[1] || h.timestamp)} (ID: {h.idStok.split('-')[1].slice(-4)})
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
                 </div>
-                
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleBatchSave}
+                    disabled={isSaving || Object.keys(modifiedStok).length === 0}
+                    className="flex items-center text-sm px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors shadow-sm disabled:opacity-50"
+                  >
+                    {isSaving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
+                    Simpan
+                  </button>
+                  <button onClick={() => setShowRestokModal(false)} className="text-slate-400 hover:text-slate-600 p-1 transition-colors">
+                    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-4 flex-1 flex flex-col overflow-hidden">
+                {!selectedIdStok && (
+                  <div className="flex gap-2 mb-4 shrink-0">
+                    {['perdana', 'voucher', 'acc'].map(cat => {
+                      const isActive = restokTab === cat;
+                      let colorClass = 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700';
+                      if (isActive) {
+                        if (cat === 'perdana') colorClass = 'bg-blue-50 border-blue-500 text-blue-700';
+                        else if (cat === 'voucher') colorClass = 'bg-orange-50 border-orange-500 text-orange-700';
+                        else colorClass = 'bg-purple-50 border-purple-500 text-purple-700';
+                      }
+                      return (
+                        <button
+                          key={cat}
+                          onClick={() => setRestokTab(cat)}
+                          className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm border ${colorClass}`}
+                        >
+                          {cat === 'acc' ? 'Aksesoris' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
                 <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex-1 flex flex-col">
                   <div className="overflow-y-auto flex-1">
                     <table className="w-full text-sm text-left">
@@ -1124,132 +1250,154 @@ const DataStok = ({ addToast }) => {
                         </tr>
                       </thead>
                       <tbody>
-                        {stokData && stokData[restokTab] ? stokData[restokTab].map((item, idx, arr) => {
-                          const prevItem = idx > 0 ? arr[idx - 1] : null;
-                          const isProviderChanged = prevItem && prevItem.provider !== item.provider;
-                          
-                          return (
-                          <tr key={idx} className={`hover:bg-slate-50/50 transition-colors ${isProviderChanged ? 'border-t-2 border-dashed border-slate-300' : ''}`}>
-                            <td className="px-2 py-2 text-center text-slate-500 text-xs">{idx + 1}</td>
-                            <td className="px-2 py-2">
-                              <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border whitespace-nowrap ${getProviderBadge(item.provider || '')}`}>
-                                {item.provider || '-'}
-                              </span>
-                            </td>
-                            <td className="px-3 py-2 font-semibold text-slate-800 text-xs">
-                              {item.nama}
-                            </td>
-                            <td className="px-2 py-2 text-center text-slate-600 font-medium text-xs">
-                              {item.stokAwal == 0 ? "" : item.stokAwal}
-                            </td>
-                            <td className="px-2 py-2 text-center">
-                              <div className="flex items-center justify-center">
-                                <input 
-                                  type="number"
-                                  value={modifiedStok[item.realRow]?.topup ?? item.topup}
-                                  onChange={(e) => handleStokChange(item, 'topup', e.target.value)}
-                                  className="w-14 px-1 py-1 text-center text-sm font-black bg-transparent text-emerald-700 outline-none rounded transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                  placeholder=""
-                                />
-                              </div>
-                            </td>
-                            <td className="px-2 py-2 text-center">
-                              <div className="flex items-center justify-center">
-                                <RestokCurrencyInput 
-                                  value={modifiedStok[item.realRow]?.hpp ?? (String(item.hpp || '0').replace(/[^0-9]/g, ''))}
-                                  onChange={(val) => handleStokChange(item, 'hpp', val)}
-                                  className="w-20 px-1 py-1 text-center text-xs font-bold bg-transparent text-slate-800 outline-none hover:bg-slate-100 focus:bg-slate-200 rounded transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                />
-                              </div>
-                            </td>
-                          </tr>
-                          );
-                        }) : (
-                          <tr>
-                            <td colSpan="6" className="text-center p-6 text-slate-500 text-sm">
-                              Produk tidak ditemukan.
-                            </td>
-                          </tr>
-                        )}
+                        {(() => {
+                          if (!stokData) return null;
+                          let displayData = [];
+
+                          if (selectedIdStok) {
+                            ['perdana', 'voucher', 'acc'].forEach(cat => {
+                              if (stokData[cat]) {
+                                displayData.push(...stokData[cat].filter(item => modifiedStok[item.realRow] !== undefined));
+                              }
+                            });
+                          } else {
+                            displayData = stokData[restokTab] || [];
+                          }
+
+                          if (displayData.length === 0) {
+                            return (
+                              <tr>
+                                <td colSpan="6" className="text-center p-6 text-slate-500 text-sm">
+                                  {selectedIdStok ? "Tidak ada histori untuk item ini, atau format lama tidak dikenali." : "Produk tidak ditemukan."}
+                                </td>
+                              </tr>
+                            );
+                          }
+
+                          return displayData.map((item, idx, arr) => {
+                            const prevItem = idx > 0 ? arr[idx - 1] : null;
+                            const isProviderChanged = prevItem && prevItem.provider !== item.provider;
+
+                            return (
+                              <tr key={idx} className={`hover:bg-slate-50/50 transition-colors ${isProviderChanged ? 'border-t-2 border-dashed border-slate-300' : ''}`}>
+                                <td className="px-2 py-2 text-center text-slate-500 text-xs">{idx + 1}</td>
+                                <td className="px-2 py-2">
+                                  <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border whitespace-nowrap ${getProviderBadge(item.provider || '')}`}>
+                                    {item.provider || '-'}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2 font-semibold text-slate-800 text-xs">
+                                  {item.nama}
+                                </td>
+                                <td className="px-2 py-2 text-center text-slate-600 font-medium text-xs">
+                                  {item.stokAwal == 0 ? "" : item.stokAwal}
+                                </td>
+                                <td className="px-2 py-2 text-center">
+                                  <div className="flex items-center justify-center">
+                                    <input
+                                      id={`restok-topup-${idx}`}
+                                      type="number"
+                                      value={modifiedStok[item.realRow]?.topup ?? item.topup}
+                                      onChange={(e) => handleStokChange(item, 'topup', e.target.value)}
+                                      onKeyDown={(e) => handleRestokKeyDown(e, 'topup', idx)}
+                                      className="w-14 px-1 py-1 text-center text-sm font-black bg-transparent text-emerald-700 outline-none rounded transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                      placeholder=""
+                                    />
+                                  </div>
+                                </td>
+                                <td className="px-2 py-2 text-center">
+                                  <div className="flex items-center justify-center">
+                                    <RestokCurrencyInput
+                                      id={`restok-hpp-${idx}`}
+                                      value={modifiedStok[item.realRow]?.hpp ?? (String(item.hpp || '0').replace(/[^0-9]/g, ''))}
+                                      onChange={(val) => handleStokChange(item, 'hpp', val)}
+                                      onKeyDown={(e) => handleRestokKeyDown(e, 'hpp', idx)}
+                                      className="w-20 px-1 py-1 text-center text-xs font-bold bg-transparent text-slate-800 outline-none hover:bg-slate-100 focus:bg-slate-200 rounded transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    />
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          });
+                        })()}
                       </tbody>
                     </table>
                   </div>
                 </div>
               </div>
             </div>
-            
+
             {/* KANAN: Nota Perhitungan */}
             <div className="w-full md:w-[400px] flex flex-col bg-slate-100 h-full shrink-0 border-l border-slate-200">
               <div className="p-4 flex items-center justify-between shrink-0">
-                 <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">
-                   Nota Perhitungan
-                 </h3>
-                 <button onClick={() => setShowRestokModal(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg transition-colors hidden md:block">
-                   <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                   </svg>
-                 </button>
+                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">
+                  Nota Perhitungan
+                </h3>
+                <button onClick={() => setShowRestokModal(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg transition-colors hidden md:block">
+                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
-              
+
               <div className="flex-1 overflow-y-auto px-4 pb-4">
                 {/* Kertas Nota */}
                 <div className="bg-white p-5 shadow-sm border border-slate-200 min-h-full font-mono text-sm relative flex flex-col">
-                   <div className="text-center font-bold text-lg mb-2 border-b-2 border-dashed border-slate-300 pb-3">
-                     NOTA RESTOK
-                   </div>
-                   
-                   <div className="space-y-3 py-4 flex-1">
-                     {(() => {
-                        const changedItems = Object.values(modifiedStok).filter(m => Number(m.topup) > 0 || (m.hpp !== undefined));
-                        if (changedItems.length === 0) {
-                          return <div className="text-center text-slate-400 my-8 italic">Belum ada barang masuk...</div>;
-                        }
-                        
-                        return changedItems.map(m => {
-                           const originalItem = ([]).concat(stokData?.perdana || [], stokData?.voucher || [], stokData?.acc || []).find(x => x.realRow === m.row);
-                           const nama = originalItem?.nama || m.produk;
-                           const qty = Number(m.topup) || 0;
-                           const hpp = Number(String((m.hpp ?? originalItem?.hpp) || '0').replace(/[^0-9]/g, '')) || 0;
-                           const subtotal = qty * hpp;
-                           return (
-                             <div key={m.row} className="flex justify-between items-start text-xs border-b border-dashed border-slate-200 pb-2">
-                               <div className="flex-1 pr-2">
-                                 <div className="font-semibold text-slate-800 uppercase line-clamp-2 leading-tight">{nama}</div>
-                                 <div className="text-slate-500 mt-1">
-                                   {qty > 0 ? (
-                                      <>{qty} x {hpp.toLocaleString('id-ID')}</>
-                                   ) : (
-                                      <span className="italic text-slate-400">Ubah HPP</span>
-                                   )}
-                                 </div>
-                               </div>
-                               <div className="font-bold text-slate-800 shrink-0 text-right">
-                                 {subtotal.toLocaleString('id-ID')}
-                               </div>
-                             </div>
-                           );
-                        });
-                     })()}
-                   </div>
+                  <div className="text-center font-bold text-lg mb-2 border-b-2 border-dashed border-slate-300 pb-3 flex flex-col items-center gap-2">
+                    <span>NOTA RESTOK</span>
+                  </div>
+                  <div className="space-y-3 py-4 flex-1">
+                    {(() => {
+                      const changedItems = Object.values(modifiedStok).filter(m => Number(m.topup) > 0 || (m.hpp !== undefined));
+                      if (changedItems.length === 0) {
+                        return <div className="text-center text-slate-400 my-8 italic">Belum ada barang masuk...</div>;
+                      }
 
-                   <div className="border-t-2 border-dashed border-slate-300 pt-3 mt-4 shrink-0">
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="font-bold text-slate-600 uppercase">Total</span>
-                        <span className="text-lg font-black text-slate-900">
-                          Rp {
-                            Object.values(modifiedStok).reduce((acc, m) => {
-                               const originalItem = ([]).concat(stokData?.perdana || [], stokData?.voucher || [], stokData?.acc || []).find(x => x.realRow === m.row);
-                               const qty = Number(m.topup) || 0;
-                               const hpp = Number(String((m.hpp ?? originalItem?.hpp) || '0').replace(/[^0-9]/g, '')) || 0;
-                               return acc + (qty * hpp);
-                            }, 0).toLocaleString('id-ID')
-                          }
-                        </span>
-                      </div>
-                   </div>
+                      return changedItems.map(m => {
+                        const originalItem = ([]).concat(stokData?.perdana || [], stokData?.voucher || [], stokData?.acc || []).find(x => x.realRow === m.row);
+                        const nama = originalItem?.nama || m.produk;
+                        const qty = Number(m.topup) || 0;
+                        const hpp = Number(String((m.hpp ?? originalItem?.hpp) || '0').replace(/[^0-9]/g, '')) || 0;
+                        const subtotal = qty * hpp;
+                        return (
+                          <div key={m.row} className="flex justify-between items-start text-xs border-b border-dashed border-slate-200 pb-2">
+                            <div className="flex-1 pr-2">
+                              <div className="font-semibold text-slate-800 uppercase line-clamp-2 leading-tight">{nama}</div>
+                              <div className="text-slate-500 mt-1">
+                                {qty > 0 ? (
+                                  <>{qty} x {hpp.toLocaleString('id-ID')}</>
+                                ) : (
+                                  <span className="italic text-slate-400">Ubah HPP</span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="font-bold text-slate-800 shrink-0 text-right">
+                              {subtotal.toLocaleString('id-ID')}
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+
+                  <div className="border-t-2 border-dashed border-slate-300 pt-3 mt-4 shrink-0">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="font-bold text-slate-600 uppercase">Total</span>
+                      <span className="text-lg font-black text-slate-900">
+                        Rp {
+                          Object.values(modifiedStok).reduce((acc, m) => {
+                            const originalItem = ([]).concat(stokData?.perdana || [], stokData?.voucher || [], stokData?.acc || []).find(x => x.realRow === m.row);
+                            const qty = Number(m.topup) || 0;
+                            const hpp = Number(String((m.hpp ?? originalItem?.hpp) || '0').replace(/[^0-9]/g, '')) || 0;
+                            return acc + (qty * hpp);
+                          }, 0).toLocaleString('id-ID')
+                        }
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
-              
+
               <div className="p-4 bg-white border-t border-slate-200 shrink-0">
                 <button
                   onClick={() => {
